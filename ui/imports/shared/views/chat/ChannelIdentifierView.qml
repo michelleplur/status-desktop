@@ -21,10 +21,6 @@ Column {
     property string chatColor: ""
     property string chatEmoji: ""
     property string chatIcon: ""
-    property bool didIJoinedChat: true
-
-    signal joinChatClicked()
-    signal rejectJoiningChatClicked()
 
     StatusSmartIdenticon {
         anchors.horizontalCenter: parent.horizontalCenter
@@ -62,11 +58,9 @@ Column {
         text: {
             switch(root.chatType) {
                 case Constants.chatType.privateGroupChat:
-                    //% "Welcome to the beginning of the <span style='color: %1'>%2</span> group!"
-                    return qsTrId("welcome-to-the-beginning-of-the--span-style--color---1---2--span--group-").arg(Style.current.textColor).arg(root.chatName);
+                    return qsTr("Welcome to the beginning of the <span style='color: %1'>%2</span> group!").arg(Style.current.textColor).arg(root.chatName);
                 case Constants.chatType.oneToOne:
-                    //% "Any messages you send here are encrypted and can only be read by you and <span style='color: %1'>%2</span>"
-                    return qsTrId("any-messages-you-send-here-are-encrypted-and-can-only-be-read-by-you-and--span-style--color---1---2--span-").arg(Style.current.textColor).arg(root.chatName)
+                    return qsTr("Any messages you send here are encrypted and can only be read by you and <span style='color: %1'>%2</span>").arg(Style.current.textColor).arg(root.chatName)
                 default: return "";
             }
         }
@@ -74,49 +68,5 @@ Column {
         color: Style.current.secondaryText
         horizontalAlignment: Text.AlignHCenter
         textFormat: Text.RichText
-    }
-
-    Item {
-        id: joinOrDecline
-        visible: root.chatType === Constants.chatType.privateGroupChat && !root.amIChatAdmin && !root.didIJoinedChat
-        anchors.horizontalCenter: parent.horizontalCenter
-        width: visible ? joinChat.width : 0
-        height: visible ? 100 : 0
-
-        StyledText {
-            id: joinChat
-            //% "Join chat"
-            text: qsTrId("join-chat")
-            font.pixelSize: 20
-            color: Style.current.blue
-            anchors.horizontalCenter: parent.horizontalCenter
-
-            MouseArea {
-                cursorShape: Qt.PointingHandCursor
-                anchors.fill: parent
-                onClicked: {
-                    root.joinChatClicked()
-                    joinOrDecline.visible = false // Once we start getting member `joined` updates from `status-go` we can remove this
-                }
-            }
-        }
-
-        StyledText {
-            //% "Decline invitation"
-            text: qsTrId("group-chat-decline-invitation")
-            font.pixelSize: 20
-            color: Style.current.blue
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.top: joinChat.bottom
-            anchors.topMargin: Style.current.padding
-            MouseArea {
-                cursorShape: Qt.PointingHandCursor
-                anchors.fill: parent
-                onClicked: {
-                    root.rejectJoiningChatClicked()
-                    joinOrDecline.visible = false // Once we start getting member `joined` updates from `status-go` we can remove this
-                }
-            }
-        }
     }
 }

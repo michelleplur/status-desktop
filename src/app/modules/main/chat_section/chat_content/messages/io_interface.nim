@@ -1,6 +1,7 @@
 import NimQml
 
 import ../../../../../../app_service/service/message/dto/[message, reaction, pinned_message]
+import ../../../../shared_models/message_item
 
 type
   AccessInterface* {.pure inheritable.} = ref object of RootObj
@@ -118,11 +119,11 @@ method requestMoreMessages*(self: AccessInterface) {.base.} =
 method fillGaps*(self: AccessInterface, messageId: string) {.base.} =
   raise newException(ValueError, "No implementation available")
 
-method joinGroupChat*(self: AccessInterface) {.base.} =
-  raise newException(ValueError, "No implementation available")
-
 method leaveChat*(self: AccessInterface) {.base.} =
   raise newException(ValueError, "No implementation available")
 
 method didIJoinedChat*(self: AccessInterface): bool {.base.} =
+  raise newException(ValueError, "No implementation available")
+
+method getMessages*(self: AccessInterface): seq[message_item.Item] =
   raise newException(ValueError, "No implementation available")

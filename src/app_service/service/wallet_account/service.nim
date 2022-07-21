@@ -1,4 +1,4 @@
-import NimQml, Tables, json, sequtils, sugar, chronicles, strformat, stint, httpclient, net, strutils, os
+import NimQml, Tables, json, sequtils, sugar, chronicles, strformat, stint, httpclient, net, strutils, os, times
 import web3/[ethtypes, conversions]
 
 import ../settings/service as settings_service
@@ -16,6 +16,7 @@ import ../../../app/core/tasks/[qt, threadpool]
 import ../../../backend/accounts as status_go_accounts
 import ../../../backend/backend as backend
 import ../../../backend/eth as status_go_eth
+import ../../../backend/transactions as status_go_transactions
 import ../../../backend/cache
 
 export dto
@@ -78,7 +79,8 @@ type DerivedAddressesArgs* = ref object of Args
 type TokensPerAccountArgs* = ref object of Args
   accountsTokens*: OrderedTable[string, seq[WalletTokenDto]] # [wallet address, list of tokens]
 
-const CheckBalanceIntervalInMilliseconds = 15 * 60 * 1000 # 15 mins
+const CheckBalanceSlotExecuteIntervalInSeconds = 15 * 60 # 15 mins
+const CheckBalanceTimerIntervalInMilliseconds = 5000 # 5 sec
 
 include async_tasks
 include  ../../common/json_utils
@@ -94,11 +96,12 @@ QtObject:
     tokenService: token_service.Service
     networkService: network_service.Service
     walletAccounts: OrderedTable[string, WalletAccountDto]
-
+    timerStartTimeInSeconds: int64
     priceCache: TimedCache
 
   # Forward declaration
   proc buildAllTokens(self: Service, calledFromTimerOrInit = false)
+  proc startBuildingTokensTimer(self: Service, resetTimeToNow = true)
 
   proc delete*(self: Service) =
     self.closingApp = true
@@ -175,6 +178,16 @@ QtObject:
     for i in 0..accounts.len:
       if(accounts[i].address == address):
         return i
+
+  proc checkRecentHistory*(self: Service) =
+    try:
+      let addresses = self.getWalletAccounts().map(a => a.address)
+      let chainIds = self.networkService.getNetworks().map(a => a.chainId)
+      status_go_transactions.checkRecentHistory(chainIds, addresses)
+    except Exception as e:
+      let errDescription = e.msg
+      error "error: ", errDescription
+      return
 
   proc getCurrencyBalance*(self: Service): float64 =
     return self.getWalletAccounts().map(a => a.getCurrencyBalance()).foldl(a + b, 0.0)
@@ -272,6 +285,7 @@ QtObject:
     discard self.settingsService.toggleTestNetworksEnabled()
     self.tokenService.init()
     self.buildAllTokens()
+    self.checkRecentHistory()
     self.events.emit(SIGNAL_WALLET_ACCOUNT_NETWORK_ENABLED_UPDATED, NetwordkEnabledToggled())
 
   proc updateWalletAccount*(self: Service, address: string, accountName: string, color: string, emoji: string) =
@@ -337,21 +351,28 @@ QtObject:
     ))
 
   proc onStartBuildingTokensTimer*(self: Service, response: string) {.slot.} =
+    if ((now().toTime().toUnix() - self.timerStartTimeInSeconds) < CheckBalanceSlotExecuteIntervalInSeconds):
+      self.startBuildingTokensTimer(resetTimeToNow = false)
+      return
+
     if self.ignoreTimeInitiatedTokensBuild:
       self.ignoreTimeInitiatedTokensBuild = false
       return
 
     self.buildAllTokens(true)
 
-  proc startBuildingTokensTimer(self: Service) =
+  proc startBuildingTokensTimer(self: Service, resetTimeToNow = true) =
     if(self.closingApp):
       return
+
+    if (resetTimeToNow):
+      self.timerStartTimeInSeconds = now().toTime().toUnix()
 
     let arg = TimerTaskArg(
       tptr: cast[ByteAddress](timerTask),
       vptr: cast[ByteAddress](self.vptr),
       slot: "onStartBuildingTokensTimer",
-      timeoutInMilliseconds: CheckBalanceIntervalInMilliseconds
+      timeoutInMilliseconds: CheckBalanceTimerIntervalInMilliseconds
     )
     self.threadpool.start(arg)
 
@@ -400,3 +421,10 @@ QtObject:
 
   proc onIsWalletEnabledChanged*(self: Service) {.slot.} =
     self.buildAllTokens()
+
+  proc getNetworkCurrencyBalance*(self: Service, network: NetworkDto): float64 =
+    for walletAccount in toSeq(self.walletAccounts.values):
+      for token in walletAccount.tokens:
+        if token.balancesPerChain.hasKey(network.chainId):
+          let balance = token.balancesPerChain[network.chainId]
+          result += balance.currencyBalance

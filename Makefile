@@ -20,6 +20,7 @@ BUILD_SYSTEM_DIR := vendor/nimbus-build-system
 	check-pkg-target-macos \
 	check-pkg-target-windows \
 	clean \
+	compile-translations \
 	deps \
 	fleets-remove \
 	fleets-update \
@@ -277,6 +278,16 @@ $(UI_RESOURCES): $(UI_SOURCES)
 
 rcc: $(UI_RESOURCES)
 
+TS_SOURCES := $(shell find ui/i18n -iname '*.ts') # ui/i18n/qml_*.ts
+QM_BINARIES := $(shell find ui/i18n -iname "*.ts" | sed 's/\.ts/\.qm/' | sed 's/ui/bin/') # bin/i18n/qml_*.qm
+
+$(QM_BINARIES): TS_FILE = $(shell echo $@ | sed 's/\.qm/\.ts/' | sed 's/bin/ui/')
+$(QM_BINARIES): $(TS_SOURCES)
+	mkdir -p bin/i18n
+	lrelease -removeidentical $(TS_FILE) -qm $@
+
+compile-translations: $(QM_BINARIES)
+
 # default token is a free-tier token with limited capabilities and usage
 # limits; our docs should include directions for community contributor to setup
 # their own Infura account and token instead of relying on this default token
@@ -320,7 +331,7 @@ else
 endif
 
 $(NIM_STATUS_CLIENT): NIM_PARAMS += $(RESOURCES_LAYOUT)
-$(NIM_STATUS_CLIENT): $(NIM_SOURCES) | $(DOTHERSIDE) $(STATUSGO) $(KEYCARDGO) $(QRCODEGEN) $(FLEETS) rcc deps
+$(NIM_STATUS_CLIENT): $(NIM_SOURCES) | $(DOTHERSIDE) $(STATUSGO) $(KEYCARDGO) $(QRCODEGEN) $(FLEETS) rcc $(QM_BINARIES) deps
 	echo -e $(BUILD_MSG) "$@" && \
 		$(ENV_SCRIPT) nim c $(NIM_PARAMS) --passL:"-L$(STATUSGO_LIBDIR)" --passL:"-lstatus" --passL:"-L$(KEYCARDGO_LIBDIR)" --passL:"-lkeycard" $(NIM_EXTRA_PARAMS) --passL:"$(QRCODEGEN)" --passL:"-lm" src/nim_status_client.nim && \
 		[[ $$? = 0 ]] && \
@@ -367,7 +378,7 @@ $(FCITX5_QT): | deps
 			.. $(HANDLE_OUTPUT) && \
 		$(FCITX5_QT_BUILD_CMD)
 
-PRODUCTION_PARAMETERS := -d:production -d:chronicles_enabled=off
+PRODUCTION_PARAMETERS := -d:production -d:chronicles_sinks=textlines[stdout],textlines[nocolors,dynamic]
 
 $(STATUS_CLIENT_APPIMAGE): override RESOURCES_LAYOUT := $(PRODUCTION_PARAMETERS)
 $(STATUS_CLIENT_APPIMAGE): nim_status_client $(APPIMAGE_TOOL) nim-status.desktop $(FCITX5_QT)
@@ -387,7 +398,7 @@ $(STATUS_CLIENT_APPIMAGE): nim_status_client $(APPIMAGE_TOOL) nim-status.desktop
 	cp -R resources.rcc tmp/linux/dist/usr/.
 	cp -R $(FLEETS) tmp/linux/dist/usr/.
 	mkdir -p tmp/linux/dist/usr/i18n
-	cp ui/i18n/* tmp/linux/dist/usr/i18n
+	cp bin/i18n/* tmp/linux/dist/usr/i18n
 
 	# Libraries
 	cp -r /usr/lib/x86_64-linux-gnu/nss tmp/linux/dist/usr/lib/
@@ -446,7 +457,7 @@ $(STATUS_CLIENT_DMG): nim_status_client $(DMG_TOOL)
 	cp -R resources.rcc $(MACOS_OUTER_BUNDLE)/Contents/
 	cp -R $(FLEETS) $(MACOS_OUTER_BUNDLE)/Contents/
 	mkdir -p $(MACOS_OUTER_BUNDLE)/Contents/i18n
-	cp ui/i18n/* $(MACOS_OUTER_BUNDLE)/Contents/i18n
+	cp bin/i18n/* $(MACOS_OUTER_BUNDLE)/Contents/i18n
 
 	echo -e $(BUILD_MSG) "app"
 	macdeployqt \
@@ -513,7 +524,7 @@ $(STATUS_CLIENT_EXE): nim_status_client nim_windows_launcher $(NIM_WINDOWS_PREBU
 	mkdir -p $(OUTPUT)/bin $(OUTPUT)/resources $(OUTPUT)/vendor $(OUTPUT)/resources/i18n
 	cat windows-install.txt | unix2dos > $(OUTPUT)/INSTALL.txt
 	cp status.ico status.svg resources.rcc $(FLEETS) $(OUTPUT)/resources/
-	cp ui/i18n/* $(OUTPUT)/resources/i18n
+	cp bin/i18n/* $(OUTPUT)/resources/i18n
 	cp cacert.pem $(OUTPUT)/bin/cacert.pem
 	cp bin/nim_status_client.exe $(OUTPUT)/bin/Status.exe
 	cp bin/nim_windows_launcher.exe $(OUTPUT)/Status.exe
@@ -547,7 +558,11 @@ $(STATUS_CLIENT_7Z): $(STATUS_CLIENT_EXE)
 	echo -e $(BUILD_MSG) "7z"
 	7z a $(STATUS_CLIENT_7Z) ./$(OUTPUT)
 
-pkg: $(PKG_TARGET)
+# pkg target rebuilds status client
+# this is to ensure production version of the app is deployed
+pkg:
+	rm $(NIM_STATUS_CLIENT) | :
+	$(MAKE) $(PKG_TARGET)
 
 pkg-linux: check-pkg-target-linux $(STATUS_CLIENT_APPIMAGE)
 

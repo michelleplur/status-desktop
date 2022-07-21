@@ -4,9 +4,11 @@ import QtQuick.Dialogs 1.2
 import QtGraphicalEffects 1.13
 import QtQuick.Layouts 1.13
 
+import StatusQ.Core 0.1
+import StatusQ.Core.Theme 0.1
+import StatusQ.Controls 0.1
 import StatusQ.Components 0.1
 import StatusQ.Popups 0.1
-
 
 import utils 1.0
 import shared 1.0
@@ -30,60 +32,52 @@ Item {
     property bool hasAddedContacts: false
     property var communityData: store.mainModuleInst ? store.mainModuleInst.activeSection || {} : {}
     property Component pinnedMessagesPopupComponent
+    property Component membershipRequestPopup
 
     signal infoButtonClicked
     signal manageButtonClicked
 
-    StatusChatInfoToolBar {
+    StatusChatInfoButton {
         id: communityHeader
+        title: communityData.name
+        subTitle: communityData.members.count <= 1 ?
+                                     qsTr("1 Member") :
+                                     qsTr("%1 Members").arg(communityData.members.count)
+        image.source: communityData.image
+        icon.color: communityData.color
+        onClicked: root.infoButtonClicked()
         anchors.top: parent.top
-        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.topMargin: 5
+        anchors.left: parent.left
+        anchors.leftMargin: Style.current.halfPadding
+        anchors.right: (implicitWidth > parent.width - 50) ? adHocChatButton.left : undefined
+        anchors.rightMargin: Style.current.halfPadding
+        type: StatusChatInfoButton.Type.OneToOneChat
+    }
 
-        chatInfoButton.title: communityData.name
-        chatInfoButton.subTitle: communityData.members.count <= 1 ?
-                                     //% "1 Member"
-                                     qsTrId("1-member") :
-                                     //% "%1 Members"
-                                     qsTrId("-1-members").arg(communityData.members.count)
-
-        chatInfoButton.image.source: communityData.image
-        chatInfoButton.icon.color: communityData.color
-        menuButton.visible: communityData.amISectionAdmin && communityData.canManageUsers
-        chatInfoButton.onClicked: root.infoButtonClicked()
-
-        popupMenu: StatusPopupMenu {
-            StatusMenuItem {
-                //% "Create channel"
-                text: qsTrId("create-channel")
-                icon.name: "channel"
-                enabled: communityData.amISectionAdmin
-                onTriggered: Global.openPopup(createChannelPopup)
-            }
-
-            StatusMenuItem {
-                //% "Create category"
-                text: qsTrId("create-category")
-                icon.name: "channel-category"
-                enabled: communityData.amISectionAdmin
-                onTriggered: Global.openPopup(createCategoryPopup)
-            }
-
-           StatusMenuSeparator {}
-
-            StatusMenuItem {
-                //% "Invite people"
-                text: qsTrId("invite-people")
-                icon.name: "share-ios"
-                enabled: communityData.canManageUsers
-                onTriggered: Global.openPopup(inviteFriendsToCommunityPopup, {
-                    community: communityData,
-                    hasAddedContacts: root.hasAddedContacts,
-                    communitySectionModule: root.communitySectionModule
-                })
+    StatusIconTabButton {
+        id: adHocChatButton
+        icon.name: "edit"
+        anchors.verticalCenter: communityHeader.verticalCenter
+        anchors.right: parent.right
+        anchors.rightMargin: 14
+        checked: root.store.openCreateChat
+        highlighted: root.store.openCreateChat
+        onClicked: {
+            root.store.openCreateChat = !root.store.openCreateChat;
+            if (!root.store.openCreateChat) {
+                Global.closeCreateChatView()
+            } else {
+                Global.openCreateChatView()
             }
         }
 
+        StatusToolTip {
+            text: qsTr("Start chat")
+            visible: parent.hovered
+        }
     } // StatusChatInfoToolBar
+
     Loader {
         id: membershipRequests
 
@@ -97,10 +91,9 @@ Item {
         height: nbRequests > 0 ? 64 : 0
         sourceComponent: Component {
             StatusContactRequestsIndicatorListItem {
-                //% "Membership requests"
-                title: qsTrId("membership-requests")
+                title: qsTr("Membership requests")
                 requestsCount: membershipRequests.nbRequests
-                sensor.onClicked: Global.openPopup(membershipRequestPopup, {
+                sensor.onClicked: Global.openPopup(root.membershipRequestPopup, {
                     communitySectionModule: root.communitySectionModule
                 })
             }
@@ -110,7 +103,9 @@ Item {
     ScrollView {
         id: chatGroupsContainer
         anchors.top: membershipRequests.bottom
-        anchors.bottom: parent.bottom
+        anchors.topMargin: Style.current.padding
+        anchors.bottom: createChatOrCommunity.top
+        anchors.horizontalCenter: parent.horizontalCenter
 
         topPadding: Style.current.padding
 
@@ -125,9 +120,11 @@ Item {
         background: MouseArea {
             acceptedButtons: Qt.RightButton
             onClicked: {
-                popup.x = mouse.x + 4
-                popup.y = mouse.y + 4
-                popup.open()
+                if (communityData.amISectionAdmin) {
+                    popup.x = mouse.x + 4
+                    popup.y = mouse.y + 4
+                    popup.open()
+                }
             }
 
         property var popup: StatusPopupMenu {
@@ -190,8 +187,7 @@ Item {
 
             popupMenu: StatusPopupMenu {
                 StatusMenuItem {
-                    //% "Create channel"
-                    text: qsTrId("create-channel")
+                    text: qsTr("Create channel")
                     icon.name: "channel"
                     // Not Refactored Yet
                     enabled: communityData.amISectionAdmin
@@ -199,8 +195,7 @@ Item {
                 }
 
                 StatusMenuItem {
-                    //% "Create category"
-                    text: qsTrId("create-category")
+                    text: qsTr("Create category")
                     icon.name: "channel-category"
                     enabled: communityData.amISectionAdmin
                     onTriggered: Global.openPopup(createCategoryPopup)
@@ -209,11 +204,10 @@ Item {
                 StatusMenuSeparator {}
 
                 StatusMenuItem {
-                    //% "Invite people"
-                    text: qsTrId("invite-people")
+                    text: qsTr("Invite people")
                     icon.name: "share-ios"
                     enabled: communityData.canManageUsers
-                    onTriggered: Global.openPopup(inviteFriendsToCommunityPopup, {
+                    onTriggered: Global.openPopup(Global.inviteFriendsToCommunityPopup, {
                         community: communityData,
                         hasAddedContacts: root.hasAddedContacts,
                         communitySectionModule: root.communitySectionModule
@@ -237,9 +231,20 @@ Item {
                 }
 
                 StatusMenuItem {
+                    text: categoryItem.muted ? qsTr("Unmute category") : qsTr("Mute category")
+                    icon.name: "notification"
+                    onTriggered: {
+                        if (categoryItem.muted) {
+                            root.communitySectionModule.unmuteCategory(categoryItem.itemId)
+                        } else {
+                            root.communitySectionModule.muteCategory(categoryItem.itemId)
+                        }
+                    }
+                }
+
+                StatusMenuItem {
                     enabled: communityData.amISectionAdmin
-                    //% "Edit Category"
-                    text: qsTrId("edit-category")
+                    text: qsTr("Edit Category")
                     icon.name: "edit"
                     onTriggered: {
                        Global.openPopup(createCategoryPopup, {
@@ -257,16 +262,13 @@ Item {
 
                 StatusMenuItem {
                     enabled: communityData.amISectionAdmin
-                    //% "Delete Category"
-                    text: qsTrId("delete-category")
+                    text: qsTr("Delete Category")
                     icon.name: "delete"
                     type: StatusMenuItem.Type.Danger
                     onTriggered: {
                         Global.openPopup(deleteCategoryConfirmationDialogComponent, {
-                            //% "Delete %1 category"
-                            title: qsTrId("delete--1-category").arg(categoryItem.name),
-                            //% "Are you sure you want to delete %1 category? Channels inside the category won’t be deleted."
-                            confirmationText: qsTrId("are-you-sure-you-want-to-delete--1-category--channels-inside-the-category-won-t-be-deleted-")
+                            title: qsTr("Delete %1 category").arg(categoryItem.name),
+                            confirmationText: qsTr("Are you sure you want to delete %1 category? Channels inside the category won’t be deleted.")
                                 .arg(categoryItem.name),
                             categoryId: categoryItem.categoryId
                         })
@@ -329,7 +331,7 @@ Item {
                 onDeleteCommunityChat:  root.store.removeCommunityChat(chatId)
 
                 onDownloadMessages: {
-                    // Not Refactored Yet
+                    root.communitySectionModule.downloadMessages(chatId, file)
                 }
 
                 onDisplayProfilePopup: {
@@ -339,7 +341,7 @@ Item {
                 onDisplayGroupInfoPopup: {
                 communitySectionModule.prepareChatContentModuleForChatId(chatId)
                 let chatContentModule = communitySectionModule.getChatContentModule()
-                Global.openPopup(groupInfoPopupComponent, {
+                Global.openPopup(root.store.groupInfoPopupComponent, {
                                      chatContentModule: chatContentModule,
                                      chatDetails: chatContentModule.chatDetails
                                  })
@@ -407,6 +409,12 @@ Item {
                         CommunityChannelsAndCategoriesBannerPanel {
                             id: channelsAndCategoriesBanner
                             communityId: communityData.id
+                            onAddMembersClicked: {
+                                Global.openPopup(createChannelPopup);
+                            }
+                            onAddCategoriesClicked: {
+                                Global.openPopup(createCategoryPopup);
+                            }
                         }
 
                         MouseArea {
@@ -465,6 +473,53 @@ Item {
         } // Column
     } // ScrollView
 
+    Loader {
+        id: createChatOrCommunity
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Style.current.padding
+        active: communityData.amISectionAdmin
+        sourceComponent: Component {
+            StatusBaseText {
+                color: Theme.palette.baseColor1
+                height: visible ? implicitHeight : 0
+                text: qsTr("Create channel or category")
+                font.underline: true
+                font.pixelSize: 13
+                textFormat: Text.RichText
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        if (createChatOrCatMenu.opened) {
+                            createChatOrCatMenu.close()
+                            return
+                        }
+                        createChatOrCatMenu.open()
+                        createChatOrCatMenu.y = - createChatOrCatMenu.height - 5
+                    }
+                }
+
+                StatusPopupMenu {
+                    id: createChatOrCatMenu
+                    closePolicy: Popup.CloseOnPressOutsideParent
+                    StatusMenuItem {
+                        text: qsTr("Create channel")
+                        icon.name: "channel"
+                        onTriggered: Global.openPopup(createChannelPopup)
+                    }
+
+                    StatusMenuItem {
+                        text: qsTr("Create category")
+                        icon.name: "channel-category"
+                        onTriggered: Global.openPopup(createCategoryPopup)
+                    }
+                }
+            }
+        }
+    }
+
     Component {
         id: createChannelPopup
         CreateChannelPopup {
@@ -517,22 +572,9 @@ Item {
 
     MessageDialog {
         id: deleteError
-        //% "Error deleting the category"
-        title: qsTrId("error-deleting-the-category")
+        title: qsTr("Error deleting the category")
         icon: StandardIcon.Critical
         standardButtons: StandardButton.Ok
-    }
-
-    Component {
-        id: membershipRequestPopup
-        MembershipRequestsPopup {
-            anchors.centerIn: parent
-            store: root.store
-            pendingRequestsToJoin: root.communityData.pendingRequestsToJoin
-            onClosed: {
-                destroy()
-            }
-        }
     }
 
     Component {

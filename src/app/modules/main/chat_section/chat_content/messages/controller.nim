@@ -111,6 +111,18 @@ proc init*(self: Controller) =
     var args = ContactArgs(e)
     self.delegate.updateContactDetails(args.contactId)
 
+  self.events.on(SIGNAL_CONTACT_UNTRUSTWORTHY) do(e: Args):
+    var args = TrustArgs(e)
+    self.delegate.updateContactDetails(args.publicKey)
+
+  self.events.on(SIGNAL_CONTACT_TRUSTED) do(e: Args):
+    var args = TrustArgs(e)
+    self.delegate.updateContactDetails(args.publicKey)
+
+  self.events.on(SIGNAL_REMOVED_TRUST_STATUS) do(e: Args):
+    var args = TrustArgs(e)
+    self.delegate.updateContactDetails(args.publicKey)
+
   self.events.on(SIGNAL_CONTACT_UPDATED) do(e: Args):
     var args = ContactArgs(e)
     self.delegate.updateContactDetails(args.contactId)
@@ -176,7 +188,8 @@ proc getChatDetails*(self: Controller): ChatDto =
 proc getCommunityDetails*(self: Controller): CommunityDto =
   return self.communityService.getCommunityById(self.sectionId)
 
-proc getOneToOneChatNameAndImage*(self: Controller): tuple[name: string, image: string] =
+proc getOneToOneChatNameAndImage*(self: Controller):
+    tuple[name: string, image: string, largeImage: string] =
   return self.chatService.getOneToOneChatNameAndImage(self.chatId)
 
 proc belongsToCommunity*(self: Controller): bool =
@@ -252,12 +265,6 @@ proc getTransactionDetails*(self: Controller, message: MessageDto): (string,stri
 
 proc getWalletAccounts*(self: Controller): seq[wallet_account_service.WalletAccountDto] =
   return self.messageService.getWalletAccounts()
-
-proc joinGroupChat*(self: Controller) =
-  var communityId = ""
-  if (self.belongsToCommunity):
-    communityId = self.sectionId
-  self.chatService.confirmJoiningGroup(communityId, self.chatId)
 
 proc leaveChat*(self: Controller) =
   self.chatService.leaveChat(self.chatId)

@@ -21,6 +21,8 @@ Item {
     property var store
     property int previousNotificationIndex
     property string previousNotificationTimestamp
+    property bool hideReadNotifications: false
+    property bool acCurrentFilterAll: false
 
     DateGroup {
         id: dateGroupLbl
@@ -40,7 +42,7 @@ Item {
                 return false
             }
 
-            return activityCenter.currentFilter === ActivityCenter.Filter.All
+            return acCurrentFilterAll;
         }
         width: parent.width
         height: visible ? 60 : 0
@@ -123,8 +125,7 @@ Item {
 //                    name = name.substring(0, 9) + "..." + name.substring(name.length - 10)
 //                }
 
-//                //% "%1 invited you to join the group"
-//                return qsTrId("-1-invited-you-to-join-the-group")
+//                return qsTr("%1 invited you to join the group")
 //                .arg(`<style type="text/css">`+
 //                     `a {`+
 //                     `color: ${Style.current.primary};`+

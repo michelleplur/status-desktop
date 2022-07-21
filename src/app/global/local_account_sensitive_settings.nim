@@ -6,26 +6,19 @@ import ../../constants
 const LSS_KEY_CHAT_SPLIT_VIEW* = "chatSplitView"
 const LSS_KEY_WALLET_SPLIT_VIEW* = "walletSplitView"
 const LSS_KEY_PROFILE_SPLIT_VIEW* = "profileSplitView"
-const LSS_KEY_COMMUNITIES_ENABLED* = "communitiesEnabled"
-const DEFAULT_COMMUNITIES_ENABLED = false
 const LSS_KEY_IS_WALLET_ENABLED* = "isExperimentalWalletEnabled"
 const DEFAULT_IS_WALLET_ENABLED = false
 const LSS_KEY_NODE_MANAGEMENT_ENABLED* = "nodeManagementEnabled"
 const DEFAULT_NODE_MANAGEMENT_ENABLED = false
 const LSS_KEY_IS_BROWSER_ENABLED* = "isExperimentalBrowserEnabled"
 const DEFAULT_IS_BROWSER_ENABLED = false
-const LSS_KEY_IS_ACTIVITY_CENTER_ENABLED* = "isActivityCenterEnabled"
-const DEFAULT_IS_ACTIVITY_CENTER_ENABLED = false
 const LSS_KEY_SHOW_ONLINE_USERS* = "showOnlineUsers"
 const DEFAULT_SHOW_ONLINE_USERS = true
 const LSS_KEY_EXPAND_USERS_LIST* = "expandUsersList"
 const DEFAULT_EXPAND_USERS_LIST = true
 const LSS_KEY_IS_GIF_WIDGET_ENABLED* = "isGifWidgetEnabled"
 const DEFAULT_IS_GIF_WIDGET_ENABLED = true
-const LSS_KEY_IS_MULTI_NETWORK_ENABLED* = "isMultiNetworkEnabled"
 const DEFAULT_IS_MULTI_NETWORK_ENABLED = false
-const LSS_KEY_IS_COMMUNITIES_PORTAL_ENABLED* = "isCommunitiesPortalEnabled"
-const DEFAULT_IS_COMMUNITIES_PORTAL_ENABLED = false
 const LSS_KEY_IS_TENOR_WARNING_ACCEPTED* = "isTenorWarningAccepted"
 const DEFAULT_IS_TENOR_WARNING_ACCEPTED = false
 const LSS_KEY_DISPLAY_CHAT_IMAGES* = "displayChatImages"
@@ -96,6 +89,8 @@ const LSS_KEY_IS_DDMMYY_DATE_FORMAT* = "is_DDMMYY_date_format"
 const DEFAULT_IS_DDMMYY_DATE_FORMAT = false
 const LSS_KEY_IS_24H_TIME_FORMAT* = "is_24h_time_format"
 const DEFAULT_IS_24H_TIME_FORMAT = false
+const LSS_KEY_USER_DECLINED_BACKUP_BANNER* = "userDeclinedBackupBanner"
+const DEFAULT_USER_DECLINED_BACKUP_BANNER = false
 
 
 logScope:
@@ -196,20 +191,6 @@ QtObject:
     write = setProfileSplitView
     notify = profileSplitViewChanged
 
-
-  proc communitiesEnabledChanged*(self: LocalAccountSensitiveSettings) {.signal.}
-  proc getCommunitiesEnabled*(self: LocalAccountSensitiveSettings): bool {.slot.} =
-    getSettingsProp[bool](self, LSS_KEY_COMMUNITIES_ENABLED, newQVariant(DEFAULT_COMMUNITIES_ENABLED))
-  proc setCommunitiesEnabled*(self: LocalAccountSensitiveSettings, value: bool) {.slot.} =
-    setSettingsProp(self, LSS_KEY_COMMUNITIES_ENABLED, newQVariant(value)):
-      self.communitiesEnabledChanged()
-
-  QtProperty[bool] communitiesEnabled:
-    read = getCommunitiesEnabled
-    write = setCommunitiesEnabled
-    notify = communitiesEnabledChanged
-
-
   proc isWalletEnabledChanged*(self: LocalAccountSensitiveSettings) {.signal.}
   proc getIsWalletEnabled*(self: LocalAccountSensitiveSettings): bool {.slot.} =
     getSettingsProp[bool](self, LSS_KEY_IS_WALLET_ENABLED, newQVariant(DEFAULT_IS_WALLET_ENABLED))
@@ -246,20 +227,6 @@ QtObject:
     read = getIsBrowserEnabled
     write = setIsBrowserEnabled
     notify = isBrowserEnabledChanged
-
-
-  proc isActivityCenterEnabledChanged*(self: LocalAccountSensitiveSettings) {.signal.}
-  proc getIsActivityCenterEnabled*(self: LocalAccountSensitiveSettings): bool {.slot.} =
-    getSettingsProp[bool](self, LSS_KEY_IS_ACTIVITY_CENTER_ENABLED, newQVariant(DEFAULT_IS_ACTIVITY_CENTER_ENABLED))
-  proc setIsActivityCenterEnabled*(self: LocalAccountSensitiveSettings, value: bool) {.slot.} =
-    setSettingsProp(self, LSS_KEY_IS_ACTIVITY_CENTER_ENABLED, newQVariant(value)):
-      self.isActivityCenterEnabledChanged()
-
-  QtProperty[bool] isActivityCenterEnabled:
-    read = getIsActivityCenterEnabled
-    write = setIsActivityCenterEnabled
-    notify = isActivityCenterEnabledChanged
-
 
   proc showOnlineUsersChanged*(self: LocalAccountSensitiveSettings) {.signal.}
   proc getShowOnlineUsers*(self: LocalAccountSensitiveSettings): bool {.slot.} =
@@ -298,31 +265,6 @@ QtObject:
     read = getIsGifWidgetEnabled
     write = setIsGifWidgetEnabled
     notify = isGifWidgetEnabledChanged
-
-  proc isMultiNetworkEnabledChanged*(self: LocalAccountSensitiveSettings) {.signal.}
-  proc getIsMultiNetworkEnabled*(self: LocalAccountSensitiveSettings): bool {.slot.} =
-    getSettingsProp[bool](self, LSS_KEY_IS_MULTI_NETWORK_ENABLED, newQVariant(DEFAULT_IS_MULTI_NETWORK_ENABLED))
-  proc setIsMultiNetworkEnabled*(self: LocalAccountSensitiveSettings, value: bool) {.slot.} =
-    setSettingsProp(self, LSS_KEY_IS_MULTI_NETWORK_ENABLED, newQVariant(value)):
-      self.isMultiNetworkEnabledChanged()
-
-  QtProperty[bool] isMultiNetworkEnabled:
-    read = getIsMultiNetworkEnabled
-    write = setIsMultiNetworkEnabled
-    notify = isMultiNetworkEnabledChanged
-
-  proc isCommunitiesPortalEnabledChanged*(self: LocalAccountSensitiveSettings) {.signal.}
-  proc getIsCommunitiesPortalEnabled*(self: LocalAccountSensitiveSettings): bool {.slot.} =
-    getSettingsProp[bool](self, LSS_KEY_IS_COMMUNITIES_PORTAL_ENABLED, newQVariant(DEFAULT_IS_COMMUNITIES_PORTAL_ENABLED))
-  proc setIsCommunitiesPortalEnabled*(self: LocalAccountSensitiveSettings, value: bool) {.slot.} =
-    setSettingsProp(self, LSS_KEY_IS_COMMUNITIES_PORTAL_ENABLED, newQVariant(value)):
-      self.isCommunitiesPortalEnabledChanged()
-
-  QtProperty[bool] isCommunitiesPortalEnabled:
-    read = getIsCommunitiesPortalEnabled
-    write = setIsCommunitiesPortalEnabled
-    notify = isCommunitiesPortalEnabledChanged
-
 
   proc isTenorWarningAcceptedChanged*(self: LocalAccountSensitiveSettings) {.signal.}
   proc getIsTenorWarningAccepted*(self: LocalAccountSensitiveSettings): bool {.slot.} =
@@ -774,6 +716,18 @@ QtObject:
     read = getIs24hTimeFormat
     write = setIs24hTimeFormat
     notify = is24hTimeFormatChanged
+  
+  proc userDeclinedBackupBannerChanged*(self: LocalAccountSensitiveSettings) {.signal.}
+  proc getUserDeclinedBackupBanner*(self: LocalAccountSensitiveSettings): bool {.slot.} =
+    getSettingsProp[bool](self, LSS_KEY_USER_DECLINED_BACKUP_BANNER, newQVariant(DEFAULT_USER_DECLINED_BACKUP_BANNER))
+  proc setUserDeclinedBackupBanner*(self: LocalAccountSensitiveSettings, value: bool) {.slot.} =
+    setSettingsProp(self, LSS_KEY_USER_DECLINED_BACKUP_BANNER, newQVariant(value)):
+      self.userDeclinedBackupBannerChanged()
+
+  QtProperty[bool] userDeclinedBackupBanner:
+    read = getUserDeclinedBackupBanner
+    write = setUserDeclinedBackupBanner
+    notify = userDeclinedBackupBannerChanged
 
   proc removeKey*(self: LocalAccountSensitiveSettings, key: string) =
     if(self.settings.isNil):
@@ -785,16 +739,12 @@ QtObject:
       of LSS_KEY_CHAT_SPLIT_VIEW: self.chatSplitViewChanged()
       of LSS_KEY_WALLET_SPLIT_VIEW: self.walletSplitViewChanged()
       of LSS_KEY_PROFILE_SPLIT_VIEW: self.profileSplitViewChanged()
-      of LSS_KEY_COMMUNITIES_ENABLED: self.communitiesEnabledChanged()
       of LSS_KEY_IS_WALLET_ENABLED: self.isWalletEnabledChanged()
       of LSS_KEY_NODE_MANAGEMENT_ENABLED: self.nodeManagementEnabledChanged()
       of LSS_KEY_IS_BROWSER_ENABLED: self.isBrowserEnabledChanged()
-      of LSS_KEY_IS_ACTIVITY_CENTER_ENABLED: self.isActivityCenterEnabledChanged()
       of LSS_KEY_SHOW_ONLINE_USERS: self.showOnlineUsersChanged()
       of LSS_KEY_EXPAND_USERS_LIST: self.expandUsersListChanged()
       of LSS_KEY_IS_GIF_WIDGET_ENABLED: self.isGifWidgetEnabledChanged()
-      of LSS_KEY_IS_MULTI_NETWORK_ENABLED: self.isMultiNetworkEnabledChanged()
-      of LSS_KEY_IS_COMMUNITIES_PORTAL_ENABLED: self.isCommunitiesPortalEnabledChanged()
       of LSS_KEY_IS_TENOR_WARNING_ACCEPTED: self.isTenorWarningAcceptedChanged()
       of LSS_KEY_DISPLAY_CHAT_IMAGES: self.displayChatImagesChanged()
       of LSS_KEY_RECENT_EMOJIS: self.recentEmojisChanged()
@@ -830,3 +780,4 @@ QtObject:
       of LSS_KEY_STICKERS_ENS_ROPSTEN: self.stickersEnsRopstenChanged()
       of LSS_KEY_IS_DDMMYY_DATE_FORMAT: self.isDDMMYYDateFormatChanged()
       of LSS_KEY_IS_24H_TIME_FORMAT: self.is24hTimeFormatChanged()
+      of LSS_KEY_USER_DECLINED_BACKUP_BANNER: self.userDeclinedBackupBannerChanged()

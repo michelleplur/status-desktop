@@ -10,29 +10,36 @@ QtObject {
     property var appMain
     property bool popupOpened: false
     property int settingsSubsection: Constants.settingsSubsection.profile
-    property var errorSound
 
     property var mainModuleInst
     property var privacyModuleInst
+    property var toastMessage
+    property var pinnedMessagesPopup
+    property var communityProfilePopup
+    property var inviteFriendsToCommunityPopup
     property bool profilePopupOpened: false
-    property string currentNetworkId: ""
-    property int currentChainId: 0
-    property bool networkGuarded: localAccountSensitiveSettings.isMultiNetworkEnabled || (root.currentNetworkId === Constants.networkMainnet ||
-        (root.currentNetworkId === Constants.networkRopsten && localAccountSensitiveSettings.stickersEnsRopsten))
+
+    property var sendMessageSound
+    property var notificationSound
+    property var errorSound
 
     signal openImagePopup(var image, var contextMenu)
     signal openLinkInBrowser(string link)
     signal openChooseBrowserPopup(string link)
-    signal openDownloadModalRequested()
+    signal openPopupRequested(var popupComponent, var params)
+    signal openDownloadModalRequested(bool available, string version, string url)
     signal settingsLoaded()
     signal openBackUpSeedPopup()
+    signal openCreateChatView()
+    signal closeCreateChatView()
 
-    signal openProfilePopupRequested(string publicKey, var parentPopup, bool openNicknamePopup)
+    signal openProfilePopupRequested(string publicKey, var parentPopup, string state)
     signal openChangeProfilePicPopup()
     signal displayToastMessage(string title, string subTitle, string icon, bool loading, int ephNotifType, string url)
+    signal openEditDisplayNamePopup()
 
-    function openProfilePopup(publicKey, parentPopup, openNicknamePopup){
-        openProfilePopupRequested(publicKey, parentPopup, openNicknamePopup);
+    function openProfilePopup(publicKey, parentPopup, state = "") {
+        openProfilePopupRequested(publicKey, parentPopup, state);
     }
 
     function openPopup(popupComponent, params = {}) {
@@ -41,8 +48,8 @@ QtObject {
         return popup;
     }
 
-    function openDownloadModal(){
-        openDownloadModalRequested();
+    function openDownloadModal(available, version, url){
+        openDownloadModalRequested(available, version, url);
     }
 
     function changeAppSectionBySectionType(sectionType, subsection = 0) {
@@ -63,7 +70,7 @@ QtObject {
         let contactDetails = Utils.getContactDetailsAsJson(pubkey)
         
         if (root.privacyModuleInst.profilePicturesVisibility !==
-            Constants.profilePicturesVisibility.everyone && !contactDetails.isContact) {
+            Constants.profilePicturesVisibility.everyone && !contactDetails.isAdded) {
             return;
         }
 

@@ -11,6 +11,7 @@ import AppLayouts.Node 1.0
 import AppLayouts.Browser 1.0
 import AppLayouts.Chat 1.0
 import AppLayouts.Chat.popups 1.0
+import AppLayouts.Chat.views 1.0
 import AppLayouts.Profile 1.0
 import AppLayouts.Profile.popups 1.0
 import AppLayouts.CommunitiesPortal 1.0
@@ -33,6 +34,8 @@ import AppLayouts.Browser.stores 1.0 as BrowserStores
 
 import AppLayouts.stores 1.0
 
+import "popups"
+
 Item {
     id: appMain
     anchors.fill: parent
@@ -42,21 +45,12 @@ Item {
     property RootStore rootStore: RootStore { }
     // set from main.qml
     property var sysPalette
-    property var newVersionJSON: {
-        try {
-            return JSON.parse(rootStore.aboutModuleInst.newVersion)
-        } catch (e) {
-            console.error("Error parsing version data", e)
-            return {}
-        }
-    }
-
-    signal openContactsPopup()
 
     Connections {
         target: rootStore.aboutModuleInst
         onAppVersionFetched: {
-            if (!newVersionJSON.available) {
+            rootStore.setLatestVersionInfo(available, version, url);
+            if (!available) {
                 versionUpToDate.show()
             } else {
                 versionWarning.show()
@@ -80,31 +74,32 @@ Item {
         onOpenDownloadModalRequested: {
             const downloadPage = downloadPageComponent.createObject(appMain,
                 {
-                    newVersionAvailable: newVersionJSON.available,
-                    downloadURL: newVersionJSON.url,
+                    newVersionAvailable: available,
+                    downloadURL: url,
                     currentVersion: rootStore.profileSectionStore.getCurrentVersion(),
-                    newVersion: newVersionJSON.version
+                    newVersion: version
                 })
             return downloadPage
         }
         onOpenProfilePopupRequested: {
             var popup = profilePopupComponent.createObject(appMain);
-            if (parentPopup){
+            if (parentPopup) {
                 popup.parentPopup = parentPopup;
             }
-            popup.openPopup(publicKey, openNicknamePopup);
+            popup.openPopup(publicKey, state);
             Global.profilePopupOpened = true;
         }
         onOpenChangeProfilePicPopup: {
             var popup = changeProfilePicComponent.createObject(appMain);
-            popup.open();
+            popup.chooseImageToCrop();
         }
-        onOpenBackUpSeedPopup: {
-            var popup = backupSeedModalComponent.createObject(appMain)
-            popup.open()
-        }
+        onOpenBackUpSeedPopup: Global.openPopup(backupSeedModalComponent)
         onDisplayToastMessage: {
             appMain.rootStore.mainModuleInst.displayEphemeralNotification(title, subTitle, icon, loading, ephNotifType, url);
+        }
+        onOpenEditDisplayNamePopup: {
+            var popup = displayNamePopupComponent.createObject(appMain)
+            popup.open()
         }
     }
 
@@ -112,42 +107,19 @@ Item {
         mainModule.setActiveSectionById(sectionId)
     }
 
-    function getContactListObject(dataModel) {
-        // Not Refactored Yet - This should be resolved in a proper way in Chat Section Module most likely
-
-//        const nbContacts = appMain.rootStore.contactsModuleInst.model.list.rowCount()
-//        const contacts = []
-//        let contact
-//        for (let i = 0; i < nbContacts; i++) {
-//            if (appMain.rootStore.contactsModuleInst.model.list.rowData(i, "isBlocked") === "true") {
-//                continue
-//            }
-
-//            contact = {
-//                name: appMain.rootStore.contactsModuleInst.model.list.rowData(i, "name"),
-//                localNickname: appMain.rootStore.contactsModuleInst.model.list.rowData(i, "localNickname"),
-//                pubKey: appMain.rootStore.contactsModuleInst.model.list.rowData(i, "pubKey"),
-//                address: appMain.rootStore.contactsModuleInst.model.list.rowData(i, "address"),
-//                identicon: appMain.rootStore.contactsModuleInst.model.list.rowData(i, "identicon"),
-//                thumbnailImage: appMain.rootStore.contactsModuleInst.model.list.rowData(i, "thumbnailImage"),
-//                isUser: false,
-//                isContact: appMain.rootStore.contactsModuleInst.model.list.rowData(i, "isContact") !== "false"
-//            }
-
-//            contacts.push(contact)
-//            if (dataModel) {
-//                dataModel.append(contact);
-//            }
-//        }
-//        return contacts
-
-        return []
-    }
-
     property Component backupSeedModalComponent: BackupSeedModal {
         id: backupSeedModal
         anchors.centerIn: parent
         privacyStore: appMain.rootStore.profileSectionStore.privacyStore
+        onClosed: destroy()
+    }
+
+    property Component displayNamePopupComponent: DisplayNamePopup {
+        anchors.centerIn: parent
+        profileStore: appMain.rootStore.profileSectionStore.profileStore
+        onClosed: {
+            destroy()
+        }
     }
 
     Component {
@@ -182,6 +154,7 @@ Item {
 
     property Component profilePopupComponent: ProfilePopup {
         id: profilePopup
+        anchors.centerIn: parent
         profileStore: appMain.rootStore.profileSectionStore.profileStore
         contactsStore: appMain.rootStore.profileSectionStore.contactsStore
         onClosed: {
@@ -194,8 +167,16 @@ Item {
     }
 
     property Component changeProfilePicComponent: Component {
-        ChangeProfilePicModal {
-            profileStore: appMain.rootStore.profileSectionStore.profileStore
+        ImageCropWorkflow {
+            title: qsTr("Profile Picture")
+            acceptButtonText: qsTr("Make this my Profile Pic")
+            onImageCropped: {
+                appMain.rootStore.profileSectionStore.profileStore.uploadImage(image,
+                                              cropRect.x.toFixed(),
+                                              cropRect.y.toFixed(),
+                                              (cropRect.x + cropRect.width).toFixed(),
+                                              (cropRect.y + cropRect.height).toFixed());
+            }
         }
     }
 
@@ -203,18 +184,27 @@ Item {
         id: sendMessageSound
         store: rootStore
         track: Qt.resolvedUrl("../imports/assets/audio/send_message.wav")
+        Component.onCompleted: {
+            Global.sendMessageSound = this;
+        }
     }
 
     Audio {
         id: notificationSound
         store: rootStore
         track: Qt.resolvedUrl("../imports/assets/audio/notification.wav")
+        Component.onCompleted: {
+            Global.notificationSound = this;
+        }
     }
 
     Audio {
         id: errorSound
         track: Qt.resolvedUrl("../imports/assets/audio/error.mp3")
         store: rootStore
+        Component.onCompleted: {
+            Global.errorSound = this;
+        }
     }
 
     AppSearch {
@@ -271,6 +261,8 @@ Item {
             }
 
             regularNavBarButton: StatusNavBarTabButton {
+                id: navbar
+                objectName: model.name + "-navbar"
                 anchors.horizontalCenter: parent.horizontalCenter
                 name: model.icon.length > 0? "" : model.name
                 icon.name: model.icon
@@ -315,8 +307,7 @@ Item {
                     }
 
                     StatusMenuItem {
-                        //% "Invite People"
-                        text: qsTrId("invite-people")
+                        text: qsTr("Invite People")
                         icon.name: "share-ios"
                         enabled: model.canManageUsers
                         onTriggered: Global.openPopup(inviteFriendsToCommunityPopup, {
@@ -327,8 +318,7 @@ Item {
                     }
 
                     StatusMenuItem {
-                        //% "View Community"
-                        text: qsTrId("view-community")
+                        text: qsTr("View Community")
                         icon.name: "group-chat"
                         onTriggered: Global.openPopup(communityProfilePopup, {
                             store: appMain.rootStore,
@@ -340,8 +330,7 @@ Item {
                     StatusMenuSeparator {}
 
                     StatusMenuItem {
-                        //% "Leave Community"
-                        text: qsTrId("leave-community")
+                        text: qsTr("Leave Community")
                         icon.name: "arrow-right"
                         icon.width: 14
                         iconRotation: 180
@@ -367,18 +356,15 @@ Item {
                 badge.implicitHeight: 15
                 badge.implicitWidth: 15
                 badge.border.color: hovered ? Theme.palette.statusBadge.hoverBorderColor : Theme.palette.statusAppNavBar.backgroundColor
-                /*
-                //This is still not in use. Read a comment for `currentUserStatus` in UserProfile on the nim side.
-                // Use this code once support for custom user status is added
-                switch(userProfile.currentUserStatus){
-                    case Constants.userStatus.online:
-                        return Style.current.green;
-                    case Constants.userStatus.doNotDisturb:
-                        return Style.current.red;
-                    default:
-                        return Style.current.midGrey;
-                }*/
-                badge.color: appMain.rootStore.userProfileInst.userStatus ? Style.current.green : Style.current.midGrey
+                badge.color: {
+                    switch(appMain.rootStore.userProfileInst.currentUserStatus){
+                        case Constants.currentUserStatus.automatic:
+                        case Constants.currentUserStatus.alwaysOnline:
+                            return Style.current.green;
+                        default:
+                            return Style.current.midGrey;
+                    }
+                }
                 badge.border.width: 3
                 onClicked: {
                     userStatusContextMenu.opened ?
@@ -388,7 +374,8 @@ Item {
 
                 UserStatusContextMenu {
                     id: userStatusContextMenu
-                    y: profileButton.y - userStatusContextMenu.height
+                    y: profileButton.y - userStatusContextMenu.height + profileButton.height
+                    x: profileButton.x + profileButton.width + 5
                     store: appMain.rootStore
                 }
             }
@@ -401,13 +388,16 @@ Item {
                 id: versionWarning
                 width: parent.width
                 height: 32
-                visible: !!newVersionJSON.available
+                visible: appMain.rootStore.newVersionAvailable
                 color: Style.current.green
                 btnWidth: 100
-                text: qsTr("A new version of Status (%1) is available").arg(newVersionJSON.version)
+                text: qsTr("A new version of Status (%1) is available").arg(appMain.rootStore.latestVersion)
                 btnText: qsTr("Download")
                 onClick: function(){
-                    Global.openDownloadModal()
+                    Global.openDownloadModal(appMain.rootStore.newVersionAvailable, appMain.rootStore.latestVersion, appMain.rootStore.downloadURL)
+                }
+                onClosed: {
+                    appMain.rootStore.resetLastVersion();
                 }
 
                 function show() {
@@ -440,198 +430,241 @@ Item {
                 }
             }
 
-            StackLayout {
-                id: appView
-                width: parent.width
 
+            Item {
+                Layout.fillWidth: true
                 Layout.fillHeight: true
 
-                currentIndex: {
-                    if(mainModule.activeSection.sectionType === Constants.appSection.chat) {
-                        return Constants.appViewStackIndex.chat
-                    }
-                    else if(mainModule.activeSection.sectionType === Constants.appSection.community) {
+                StackLayout {
+                    id: appView
 
-                        for(let i = this.children.length - 1; i >=0; i--)
-                        {
-                            var obj = this.children[i];
-                            if(obj && obj.sectionId && obj.sectionId == mainModule.activeSection.id)
+                    anchors.fill: parent
+
+                    currentIndex: {
+                        if(mainModule.activeSection.sectionType === Constants.appSection.chat) {
+                            return Constants.appViewStackIndex.chat
+                        }
+                        else if(mainModule.activeSection.sectionType === Constants.appSection.community) {
+
+                            for(let i = this.children.length - 1; i >=0; i--)
                             {
-                                return i
+                                var obj = this.children[i];
+                                if(obj && obj.sectionId && obj.sectionId == mainModule.activeSection.id)
+                                {
+                                    return i
+                                }
                             }
+
+                            // Should never be here, correct index must be returned from the for loop above
+                            console.error("Wrong section type: ", mainModule.activeSection.sectionType,
+                                        " or section id: ", mainModule.activeSection.id)
+                            return Constants.appViewStackIndex.community
+                        }
+                        else if(mainModule.activeSection.sectionType === Constants.appSection.communitiesPortal) {
+                            return Constants.appViewStackIndex.communitiesPortal
+                        }
+                        else if(mainModule.activeSection.sectionType === Constants.appSection.wallet) {
+                            return Constants.appViewStackIndex.wallet
+                        }
+                        else if(mainModule.activeSection.sectionType === Constants.appSection.browser) {
+                            return Constants.appViewStackIndex.browser
+                        }
+                        else if(mainModule.activeSection.sectionType === Constants.appSection.profile) {
+                            return Constants.appViewStackIndex.profile
+                        }
+                        else if(mainModule.activeSection.sectionType === Constants.appSection.node) {
+                            return Constants.appViewStackIndex.node
                         }
 
-                        // Should never be here, correct index must be returned from the for loop above
-                        console.error("Wrong section type: ", mainModule.activeSection.sectionType,
-                                      " or section id: ", mainModule.activeSection.id)
-                        return Constants.appViewStackIndex.community
-                    }
-                    else if(mainModule.activeSection.sectionType === Constants.appSection.communitiesPortal) {
-                        return Constants.appViewStackIndex.communitiesPortal
-                    }
-                    else if(mainModule.activeSection.sectionType === Constants.appSection.wallet) {
-                        return Constants.appViewStackIndex.wallet
-                    }
-                    else if(mainModule.activeSection.sectionType === Constants.appSection.browser) {
-                        return Constants.appViewStackIndex.browser
-                    }
-                    else if(mainModule.activeSection.sectionType === Constants.appSection.profile) {
-                        return Constants.appViewStackIndex.profile
-                    }
-                    else if(mainModule.activeSection.sectionType === Constants.appSection.node) {
-                        return Constants.appViewStackIndex.node
+                        // We should never end up here
+                        console.error("Unknown section type")
                     }
 
-                    // We should never end up here
-                    console.error("Unknown section type")
-                }
+                    onCurrentIndexChanged: {
+                        var obj = this.children[currentIndex];
+                        if(!obj)
+                            return
 
-                onCurrentIndexChanged: {
-                    var obj = this.children[currentIndex];
-                    if(!obj)
-                        return
+                        if (obj.onActivated && typeof obj.onActivated === "function") {
+                            this.children[currentIndex].onActivated()
+                        }
 
-                    if (obj.onActivated && typeof obj.onActivated === "function") {
-                        this.children[currentIndex].onActivated()
+                        if(obj === browserLayoutContainer && browserLayoutContainer.active == false){
+                            browserLayoutContainer.active = true;
+                        }
+
+                        if(obj === walletLayoutContainer){
+                            walletLayoutContainer.showSigningPhrasePopup();
+                        }
                     }
 
-                    if(obj === browserLayoutContainer && browserLayoutContainer.active == false){
-                        browserLayoutContainer.active = true;
+                    // NOTE:
+                    // If we ever change stack layout component order we need to updade
+                    // Constants.appViewStackIndex accordingly
+
+                    ChatLayout {
+                        id: chatLayoutContainer
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
+                        Layout.fillHeight: true
+
+                        chatView.pinnedMessagesListPopupComponent: pinnedMessagesPopupComponent
+                        chatView.emojiPopup: statusEmojiPopup
+
+                        contactsStore: appMain.rootStore.contactStore
+                        rootStore.emojiReactionsModel: appMain.rootStore.emojiReactionsModel
+
+                        chatView.onProfileButtonClicked: {
+                            Global.changeAppSectionBySectionType(Constants.appSection.profile);
+                        }
+
+                        chatView.onOpenAppSearch: {
+                            appSearch.openSearchPopup()
+                        }
+
+                        onImportCommunityClicked: {
+                            Global.openPopup(communitiesPortalLayoutContainer.importCommunitiesPopup);
+                        }
+
+                        onCreateCommunityClicked: {
+                            Global.openPopup(communitiesPortalLayoutContainer.createCommunitiesPopup);
+                        }
+
+                        Component.onCompleted: {
+                            rootStore.chatCommunitySectionModule = mainModule.getChatSectionModule()
+                        }
                     }
 
-                    if(obj === walletLayoutContainer){
-                        walletLayoutContainer.showSigningPhrasePopup();
-                    }
-                }
-
-                // NOTE:
-                // If we ever change stack layout component order we need to updade
-                // Constants.appViewStackIndex accordingly
-
-                ChatLayout {
-                    id: chatLayoutContainer
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                    Layout.fillHeight: true
-
-                    chatView.pinnedMessagesListPopupComponent: pinnedMessagesPopupComponent
-                    chatView.emojiPopup: statusEmojiPopup
-
-                    contactsStore: appMain.rootStore.contactStore
-                    rootStore.emojiReactionsModel: appMain.rootStore.emojiReactionsModel
-
-                    chatView.onProfileButtonClicked: {
-                        Global.changeAppSectionBySectionType(Constants.appSection.profile);
+                    CommunitiesPortalLayout {
+                        id: communitiesPortalLayoutContainer
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
+                        Layout.fillHeight: true
                     }
 
-                    chatView.onOpenAppSearch: {
-                        appSearch.openSearchPopup()
+                    WalletLayout {
+                        id: walletLayoutContainer
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
+                        Layout.fillHeight: true
+                        store: appMain.rootStore
+                        contactsStore: appMain.rootStore.profileSectionStore.contactsStore
+                        emojiPopup: statusEmojiPopup
+                        sendModal: sendModal
                     }
 
-                    Component.onCompleted: {
-                        rootStore.chatCommunitySectionModule = mainModule.getChatSectionModule()
+                    Component {
+                        id: browserLayoutComponent
+                        BrowserLayout {
+                            globalStore: appMain.rootStore
+                            sendTransactionModal: sendModal
+                        }
                     }
-                }
 
-                CommunitiesPortalLayout {
-                    id: communitiesPortalLayoutContainer
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                    Layout.fillHeight: true
-                }
+                    Loader {
+                        id: browserLayoutContainer
+                        sourceComponent: browserLayoutComponent
+                        active: false
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
+                        Layout.fillHeight: true
+                        // Loaders do not have access to the context, so props need to be set
+                        // Adding a "_" to avoid a binding loop
+                        // Not Refactored Yet
+                        //                property var _chatsModel: chatsModel.messageView
+                        // Not Refactored Yet
+                        //                property var _walletModel: walletModel
+                        // Not Refactored Yet
+                        //                property var _utilsModel: utilsModel
+                        property var _web3Provider: BrowserStores.Web3ProviderStore.web3ProviderInst
+                    }
 
-                WalletLayout {
-                    id: walletLayoutContainer
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                    Layout.fillHeight: true
-                    store: appMain.rootStore
-                    contactsStore: appMain.rootStore.profileSectionStore.contactsStore
-                    emojiPopup: statusEmojiPopup
-                    sendModal: sendModal
-                }
+                    ProfileLayout {
+                        id: profileLayoutContainer
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
+                        Layout.fillHeight: true
 
-                Component {
-                    id: browserLayoutComponent
-                    BrowserLayout {
+                        store: appMain.rootStore.profileSectionStore
                         globalStore: appMain.rootStore
-                        sendTransactionModal: sendModal
+                        systemPalette: appMain.sysPalette
+                        emojiPopup: statusEmojiPopup
                     }
 
-                }
+                    NodeLayout {
+                        id: nodeLayoutContainer
+                        Layout.fillWidth: true
+                        Layout.alignment: Qt.AlignLeft | Qt.AlignTop
+                        Layout.fillHeight: true
+                    }
 
-                Loader {
-                    id: browserLayoutContainer
-                    sourceComponent: browserLayoutComponent
-                    active: false
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                    Layout.fillHeight: true
-                    // Loaders do not have access to the context, so props need to be set
-                    // Adding a "_" to avoid a binding loop
-                    // Not Refactored Yet
-                    //                property var _chatsModel: chatsModel.messageView
-                    // Not Refactored Yet
-                    //                property var _walletModel: walletModel
-                    // Not Refactored Yet
-                    //                property var _utilsModel: utilsModel
-                    property var _web3Provider: BrowserStores.Web3ProviderStore.web3ProviderInst
-                }
+                    Repeater {
+                        model: mainModule.sectionsModel
 
-                ProfileLayout {
-                    id: profileLayoutContainer
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                    Layout.fillHeight: true
+                        delegate: DelegateChooser {
+                            id: delegateChooser
+                            role: "sectionType"
+                            DelegateChoice {
+                                roleValue: Constants.appSection.community
+                                delegate: ChatLayout {
+                                    property string sectionId: model.id
+                                    Layout.fillWidth: true
+                                    Layout.alignment: Qt.AlignLeft | Qt.AlignTop
+                                    Layout.fillHeight: true
 
-                    store: appMain.rootStore.profileSectionStore
-                    globalStore: appMain.rootStore
-                    systemPalette: appMain.sysPalette
-                    emojiPopup: statusEmojiPopup
-                }
+                                    chatView.pinnedMessagesListPopupComponent: pinnedMessagesPopupComponent
+                                    chatView.emojiPopup: statusEmojiPopup
 
-                NodeLayout {
-                    id: nodeLayoutContainer
-                    Layout.fillWidth: true
-                    Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                    Layout.fillHeight: true
-                }
+                                    contactsStore: appMain.rootStore.contactStore
+                                    rootStore.emojiReactionsModel: appMain.rootStore.emojiReactionsModel
 
-                Repeater {
-                    model: mainModule.sectionsModel
+                                    chatView.onProfileButtonClicked: {
+                                        Global.changeAppSectionBySectionType(Constants.appSection.profile);
+                                    }
 
-                    delegate: DelegateChooser {
-                        id: delegateChooser
-                        role: "sectionType"
-                        DelegateChoice {
-                            roleValue: Constants.appSection.community
-                            delegate: ChatLayout {
-                                property string sectionId: model.id
-                                Layout.fillWidth: true
-                                Layout.alignment: Qt.AlignLeft | Qt.AlignTop
-                                Layout.fillHeight: true
+                                    chatView.onOpenAppSearch: {
+                                        appSearch.openSearchPopup()
+                                    }
 
-                                chatView.pinnedMessagesListPopupComponent: pinnedMessagesPopupComponent
-                                chatView.emojiPopup: statusEmojiPopup
-
-                                contactsStore: appMain.rootStore.contactStore
-                                rootStore.emojiReactionsModel: appMain.rootStore.emojiReactionsModel
-
-                                chatView.onProfileButtonClicked: {
-                                    Global.changeAppSectionBySectionType(Constants.appSection.profile);
-                                }
-
-                                chatView.onOpenAppSearch: {
-                                    appSearch.openSearchPopup()
-                                }
-
-                                Component.onCompleted: {
-                                    // we cannot return QVariant if we pass another parameter in a function call
-                                    // that's why we're using it this way
-                                    mainModule.prepareCommunitySectionModuleForCommunityId(model.id)
-                                    rootStore.chatCommunitySectionModule = mainModule.getCommunitySectionModule()
+                                    Component.onCompleted: {
+                                        // we cannot return QVariant if we pass another parameter in a function call
+                                        // that's why we're using it this way
+                                        mainModule.prepareCommunitySectionModuleForCommunityId(model.id)
+                                        rootStore.chatCommunitySectionModule = mainModule.getCommunitySectionModule()
+                                    }
                                 }
                             }
+                        }
+                    }
+                }
+
+                CreateChatView {
+                    property bool opened: false
+
+                    id: createChatView
+                    rootStore: chatLayoutContainer.rootStore
+                    emojiPopup: statusEmojiPopup
+                    anchors.top: parent.top
+                    anchors.topMargin: 8
+                    anchors.rightMargin: 8
+                    anchors.bottom: parent.bottom
+                    anchors.right: parent.right
+                    width: chatLayoutContainer.chatView.width - chatLayoutContainer.chatView.leftPanel.width - anchors.rightMargin - anchors.leftMargin
+                    visible: createChatView.opened
+
+                    Connections {
+                        target: Global
+                        onOpenCreateChatView: {
+                            createChatView.opened = true
+                        }
+                        onCloseCreateChatView: {
+                            createChatView.opened = false
+                        }
+                    }
+                    Connections {
+                        target: mainModule
+                        onActiveSectionChanged: {
+                            Global.closeCreateChatView()
                         }
                     }
                 }
@@ -650,45 +683,14 @@ Item {
 
         Component {
             id: mailserverNotWorkingPopupComponent
-            StatusModal {
-                id: msNotWorkingPopup
-                anchors.centerIn: parent
-                header.title: qsTr("Can not connect to mailserver")
+
+            MailserverConnectionDialog {
                 onClosed: {
                     appLayout.mailserverNotWorkingPopup = null
                     destroy()
                 }
-
-                contentItem: Item {
-                    width: msNotWorkingPopup.width
-                    implicitHeight: 100
-
-                    StatusBaseText {
-                      text: qsTr("The mailserver you're connecting to is unavailable.")
-                      color: Theme.palette.directColor1
-                      anchors.centerIn: parent
-                    }
-                }
-
-                rightButtons: [
-                    StatusButton {
-                      text: qsTr("Pick another")
-                      onClicked: {
-                          Global.changeAppSectionBySectionType(Constants.appSection.profile, Constants.settingsSubsection.messaging)
-                          msNotWorkingPopup.close()
-                      }
-                    },
-                    StatusButton {
-                      text: qsTr("Retry")
-                      onClicked: {
-                        // Retrying already happens automatically, so doing nothing
-                        // here is the same as retrying...
-                        msNotWorkingPopup.close()
-                      }
-                    }
-                ]
             }
-          }
+        }
 
         Component {
             id: chooseBrowserPopupComponent
@@ -799,24 +801,17 @@ Item {
                 rptDraggedPreviews.y = drag.y
             }
             onExited: cleanup()
-            Rectangle {
-                id: dropRectangle
-
-                width: parent.width
-                height: parent.height
-                color: Style.current.transparent
-                opacity: 0.8
-
-                states: [
-                    State {
-                        when: dragTarget.enabled && dragTarget.containsDrag
-                        PropertyChanges {
-                            target: dropRectangle
-                            color: Style.current.background
-                        }
-                    }
-                ]
+            Loader {
+                active: dragTarget.enabled && dragTarget.containsDrag
+                width: active ? parent.width : 0
+                height: active ? parent.height : 0
+                sourceComponent: Rectangle {
+                    id: dropRectangle
+                    color: Style.current.background
+                    opacity: 0.8
+                }
             }
+           
             Repeater {
                 id: rptDraggedPreviews
 
@@ -858,7 +853,7 @@ Item {
             }
             onLoaded: {
                 if (!!sendModal.selectedAccount) {
-                    item.preSelectedAccount = sendModal.selectedAccount
+                    item.selectedAccount = sendModal.selectedAccount
                 }
             }
         }
@@ -962,6 +957,10 @@ Item {
             type: model.ephNotifType
             linkUrl: model.url
             duration: model.durationInMs
+            onClicked: {
+                appMain.rootStore.mainModuleInst.ephemeralNotificationClicked(model.id)
+                this.open = false
+            }
             onLinkActivated: {
                 Qt.openUrlExternally(link);
             }
@@ -973,6 +972,9 @@ Item {
 
     Component.onCompleted: {
         Global.appMain = this;
+        Global.pinnedMessagesPopup = pinnedMessagesPopupComponent;
+        Global.communityProfilePopup = communityProfilePopup;
+        Global.inviteFriendsToCommunityPopup = inviteFriendsToCommunityPopup;
         const whitelist = appMain.rootStore.messagingStore.getLinkPreviewWhitelist()
         try {
             const whiteListedSites = JSON.parse(whitelist)

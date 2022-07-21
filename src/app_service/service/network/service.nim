@@ -1,7 +1,6 @@
 import json, json_serialization, chronicles, atomics
 
 import ../../../app/core/eventemitter
-import ../../../app/global/global_singleton
 import ../../../backend/backend as backend
 import ../settings/service as settings_service
 
@@ -69,6 +68,8 @@ proc upsertNetwork*(self: Service, network: NetworkDto) =
     nativeCurrencySymbol: network.nativeCurrencySymbol,
     isTest: network.isTest,
     enabled: network.enabled,
+    chainColor: network.chainColor,
+    shortName: network.shortName,
   ))
   self.dirty.store(true)
 
@@ -96,10 +97,6 @@ proc toggleNetwork*(self: Service, chainId: int) =
   self.upsertNetwork(network)
 
 proc getNetworkForEns*(self: Service): NetworkDto =
-  if not singletonInstance.localAccountSensitiveSettings.getIsMultiNetworkEnabled():
-    let networkType = self.settingsService.getCurrentNetwork().toNetworkType()
-    return self.getNetwork(networkType)
-
   if self.settingsService.areTestNetworksEnabled():
     return self.getNetwork(Ropsten)
 
@@ -115,10 +112,6 @@ proc getNetworkForChat*(self: Service): NetworkDto =
     return self.getNetworkForEns()
 
 proc getNetworkForCollectibles*(self: Service): NetworkDto =
-  if not singletonInstance.localAccountSensitiveSettings.getIsMultiNetworkEnabled():
-    let networkType = self.settingsService.getCurrentNetwork().toNetworkType()
-    return self.getNetwork(networkType)
-
   if self.settingsService.areTestNetworksEnabled():
     return self.getNetwork(Rinkeby)
 

@@ -52,7 +52,7 @@ proc deactivateChat*(chatId: string): RpcResponse[JsonNode] {.raises: [Exception
   callPrivateRPC("deactivateChat".prefix, %* [{ "ID": chatId }])
 
 proc clearChatHistory*(chatId: string): RpcResponse[JsonNode] {.raises: [Exception].} =
-  callPrivateRPC("deleteMessagesByChatID".prefix, %* [chatId])
+  callPrivateRPC("clearHistory".prefix, %* [{ "id": chatId }])
 
 proc sendChatMessage*(
     chatId: string,
@@ -87,7 +87,7 @@ proc sendImages*(chatId: string, images: var seq[string]): RpcResponse[JsonNode]
         "imagePath": image,
         # TODO is this still needed
         # "ensName": preferredUsername,
-        "text": ""
+        "text": "Please upgrade your status version to view images"
       }
     )
   callPrivateRPC("sendChatMessages".prefix, %* [imagesJson])
@@ -123,10 +123,6 @@ proc makeAdmin*(communityID: string, chatId: string, pubKey: string): RpcRespons
 proc createGroupChat*(communityID: string, groupName: string, pubKeys: seq[string]): RpcResponse[JsonNode] {.raises: [Exception].} =
   let payload = %* [nil, communityID, groupName, pubKeys]
   result = callPrivateRPC("createGroupChatWithMembers".prefix, payload)
-
-proc confirmJoiningGroup*(communityID: string, chatId: string): RpcResponse[JsonNode] {.raises: [Exception].} =
-  let payload = %* [communityID, chatId]
-  result = callPrivateRPC("confirmJoiningGroup".prefix, payload)
 
 proc createGroupChatFromInvitation*(groupName: string, chatId: string, adminPK: string): RpcResponse[JsonNode] {.raises: [Exception].} =
   let payload = %* [groupName, chatId, adminPK]

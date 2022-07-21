@@ -24,23 +24,30 @@ import "../../Wallet"
 import "../stores"
 
 ColumnLayout {
-    id: chatContentRoot
+    id: root
     spacing: 0
 
     // Important:
     // Each chat/channel has its own ChatContentModule
     property var chatContentModule
+    property var chatSectionModule
     property var rootStore
     property var contactsStore
     property bool isActiveChannel: false
+    property bool isConnected: false
     property var emojiPopup
+    property bool activityCenterVisible: false
+    property int activityCenterNotificationsCount
     property alias textInputField: chatInput
     property UsersStore usersStore: UsersStore {}
+    property Component pinnedMessagesPopupComponent
 
     onChatContentModuleChanged: {
-        chatContentRoot.usersStore.usersModule = chatContentRoot.chatContentModule.usersModule
+        root.usersStore.usersModule = root.chatContentModule.usersModule
     }
 
+    signal openAppSearch()
+    signal notificationButtonClicked()
     signal openStickerPackPopup(string stickerPackId)
 
     property Component sendTransactionNoEnsModal
@@ -54,7 +61,7 @@ ColumnLayout {
     // NOTE: Used this property change as it is the current way used for displaying new channel/chat data of content view.
     // If in the future content is loaded dynamically, input focus should be activated when loaded / created content view.
     onHeightChanged: {
-        if(chatContentRoot.height > 0) {
+        if(root.height > 0) {
             chatInput.forceInputActiveFocus()
         }
     }  
@@ -77,19 +84,14 @@ ColumnLayout {
                 switch (chatContentModule.chatDetails.type) {
                 case Constants.chatType.oneToOne:
                     return (chatContentModule.isMyContact(chatContentModule.chatDetails.id) ?
-                                //% "Contact"
-                                qsTrId("chat-is-a-contact") :
-                                //% "Not a contact"
-                                qsTrId("chat-is-not-a-contact"))
+                                qsTr("Contact") :
+                                qsTr("Not a contact"))
                 case Constants.chatType.publicChat:
-                    //% "Public chat"
-                    return qsTrId("public-chat")
+                    return qsTr("Public chat")
                 case Constants.chatType.privateGroupChat:
-                    let cnt = chatContentRoot.usersStore.usersModule.model.count
-                    //% "%1 members"
-                    if(cnt > 1) return qsTrId("-1-members").arg(cnt);
-                    //% "1 member"
-                    return qsTrId("1-member");
+                    let cnt = root.usersStore.usersModule.model.count
+                    if(cnt > 1) return qsTr("%1 members").arg(cnt);
+                    return qsTr("1 member");
                 case Constants.chatType.communityChat:
                     return Utils.linkifyAndXSS(chatContentModule.chatDetails.description).trim()
                 default:
@@ -140,7 +142,7 @@ ColumnLayout {
             onClicked: {
                 switch (chatContentModule.chatDetails.type) {
                 case Constants.chatType.privateGroupChat:
-                    Global.openPopup(groupInfoPopupComponent, {
+                    Global.openPopup(root.rootStore.groupInfoPopupComponent, {
                                          chatContentModule: chatContentModule,
                                          chatDetails: chatContentModule.chatDetails
                                      })
@@ -157,11 +159,10 @@ ColumnLayout {
     Component {
         id: contactsSelector
         GroupChatPanel {
-            sectionModule: chatSectionModule
-            chatContentModule: chatContentRoot.chatContentModule
-            rootStore: chatContentRoot.rootStore
-            maxHeight: chatContentRoot.height
-
+            sectionModule: root.chatSectionModule
+            chatContentModule: root.chatContentModule
+            rootStore: root.rootStore
+            maxHeight: root.height
             onPanelClosed: topBar.toolbarComponent = statusChatInfoButton
         }
     }
@@ -180,18 +181,18 @@ ColumnLayout {
                     chatContentModule.chatDetails.isUsersListAvailable
         }
         membersButton.highlighted: localAccountSensitiveSettings.expandUsersList
-        notificationButton.visible: localAccountSensitiveSettings.isActivityCenterEnabled
         notificationButton.tooltip.offset: localAccountSensitiveSettings.expandUsersList && membersButton.visible ? 0 : 14
 
-        notificationCount: activityCenter.unreadNotificationsCount
+        notificationCount: root.activityCenterNotificationsCount
 
         onSearchButtonClicked: root.openAppSearch()
 
         onMembersButtonClicked: localAccountSensitiveSettings.expandUsersList = !localAccountSensitiveSettings.expandUsersList
-        onNotificationButtonClicked: activityCenter.open()
+        notificationButton.highlighted: root.activityCenterVisible
+        onNotificationButtonClicked: root.notificationButtonClicked()
 
         popupMenu: ChatContextMenuView {
-            emojiPopup: chatContentRoot.emojiPopup
+            emojiPopup: root.emojiPopup
             openHandler: function () {
                 if(!chatContentModule) {
                     console.debug("error on open chat context menu handler - chat content module is not set")
@@ -257,7 +258,11 @@ ColumnLayout {
             onDeleteCommunityChat: root.rootStore.removeCommunityChat(chatId)
 
             onDownloadMessages: {
-                // Not Refactored Yet
+                 if(!chatContentModule) {
+                    console.debug("error on leave chat from context menu - chat content module is not set")
+                    return
+                }
+                chatContentModule.downloadMessages(file)
             }
 
             onDisplayProfilePopup: {
@@ -265,7 +270,7 @@ ColumnLayout {
             }
 
             onDisplayGroupInfoPopup: {
-                Global.openPopup(groupInfoPopupComponent, {
+                Global.openPopup(root.rootStore.groupInfoPopupComponent, {
                                      chatContentModule: chatContentModule,
                                      chatDetails: chatContentModule.chatDetails
                                  })
@@ -286,7 +291,7 @@ ColumnLayout {
                 topBar.toolbarComponent = contactsSelector
             }
             onFetchMoreMessages: {
-                chatContentRoot.rootStore.messageStore.requestMoreMessages();
+                root.rootStore.messageStore.requestMoreMessages();
             }
             onLeaveGroup: {
                 chatContentModule.leaveChat();
@@ -314,10 +319,8 @@ ColumnLayout {
             color: Style.current.white
             id: connectedStatusLbl
             text: isConnected ?
-                      //% "Connected"
-                      qsTrId("connected") :
-                      //% "Disconnected"
-                      qsTrId("disconnected")
+                      qsTr("Connected") :
+                      qsTr("Disconnected")
         }
 
         Connections {
@@ -325,10 +328,8 @@ ColumnLayout {
             onOnlineStatusChanged: {
                 if (connected === isConnected) return;
                 isConnected = connected;
-                if(isConnected){
-                    timer.setTimeout(function(){
-                        connectedStatusRect.visible = false;
-                    }, 5000);
+                if(isConnected) {
+                    onlineStatusTimer.start();
                 } else {
                     connectedStatusRect.visible = true;
                 }
@@ -342,9 +343,17 @@ ColumnLayout {
         }
     }
 
+    Timer {
+        id: onlineStatusTimer
+        interval: 5000
+        onTriggered: {
+            connectedStatusRect.visible = false;
+        }
+    }
+
     StatusBanner {
         Layout.fillWidth: true
-        visible: chatContentRoot.isBlocked
+        visible: root.isBlocked
         type: StatusBanner.Type.Danger
         statusText: qsTr("Blocked")
     }
@@ -352,13 +361,13 @@ ColumnLayout {
     MessageStore {
         id: messageStore
         messageModule: chatContentModule? chatContentModule.messagesModule : null
-        chatSectionModule: chatContentRoot.rootStore.chatCommunitySectionModule
+        chatSectionModule: root.rootStore.chatCommunitySectionModule
     }
 
     MessageContextMenuView {
         id: contextmenu
-        store: chatContentRoot.rootStore
-        reactionModel: chatContentRoot.rootStore.emojiReactionsModel
+        store: root.rootStore
+        reactionModel: root.rootStore.emojiReactionsModel
         onPinMessage: {
             messageStore.pinMessage(messageId)
         }
@@ -372,7 +381,7 @@ ColumnLayout {
                 console.debug("error on open pinned messages limit reached from message context menu - chat content module is not set")
                 return
             }
-            Global.openPopup(pinnedMessagesPopupComponent, {
+            Global.openPopup(Global.pinnedMessagesPopup, {
                                  store: rootStore,
                                  messageStore: messageStore,
                                  pinnedMessagesModel: chatContentModule.pinnedMessagesModel,
@@ -385,7 +394,7 @@ ColumnLayout {
         }
 
         onOpenProfileClicked: {
-            Global.openProfilePopup(publicKey)
+            Global.openProfilePopup(publicKey, null, state)
         }
 
         onDeleteMessage: {
@@ -416,15 +425,16 @@ ColumnLayout {
             id: chatMessages
             Layout.fillWidth: true
             Layout.fillHeight: true
-            store: chatContentRoot.rootStore
-            contactsStore: chatContentRoot.contactsStore
+            store: root.rootStore
+            contactsStore: root.contactsStore
             messageContextMenuInst: contextmenu
             messageStore: messageStore
-            emojiPopup: chatContentRoot.emojiPopup
-            usersStore: chatContentRoot.usersStore
-            stickersLoaded: chatContentRoot.stickersLoaded
-            isChatBlocked: chatContentRoot.isBlocked
+            emojiPopup: root.emojiPopup
+            usersStore: root.usersStore
+            stickersLoaded: root.stickersLoaded
+            isChatBlocked: root.isBlocked
             channelEmoji: chatContentModule.chatDetails.emoji || ""
+            isActiveChannel: root.isActiveChannel
             onShowReplyArea: {
                 let obj = messageStore.getMessageByIdAsJson(messageId)
                 if (!obj) {
@@ -460,37 +470,23 @@ ColumnLayout {
 
             StatusChatInput {
                 id: chatInput
-                store: chatContentRoot.rootStore
-                usersStore: chatContentRoot.usersStore
+                store: root.rootStore
+                usersStore: root.usersStore
 
-                visible: {
-                    return true
-                        // Not Refactored Yet
-                        //                if (chatContentRoot.rootStore.chatsModelInst.channelView.activeChannel.chatType === Constants.chatType.privateGroupChat) {
-                        //                    return chatContentRoot.rootStore.chatsModelInst.channelView.activeChannel.isMember
-                        //                }
-                        //                if (chatContentRoot.rootStore.chatsModelInst.channelView.activeChannel.chatType === Constants.chatType.oneToOne) {
-                        //                    return isContact
-                        //                }
-                        //                const community = chatContentRoot.rootStore.chatsModelInst.communities.activeCommunity
-                        //                return !community.active ||
-                        //                        community.access === Constants.communityChatPublicAccess ||
-                        //                        community.admin ||
-                        //                        chatContentRoot.rootStore.chatsModelInst.channelView.activeChannel.canPost
-                }
                 messageContextMenu: contextmenu
-                emojiPopup: chatContentRoot.emojiPopup
-                isContactBlocked: chatContentRoot.isBlocked
-                isActiveChannel: chatContentRoot.isActiveChannel
-                chatInputPlaceholder: chatContentRoot.isBlocked ?
-                                          //% "This user has been blocked."
-                                          qsTrId("this-user-has-been-blocked-") :
-                                          //% "Type a message."
-                                          qsTrId("type-a-message-")
+                emojiPopup: root.emojiPopup
+                isContactBlocked: root.isBlocked
+                isActiveChannel: root.isActiveChannel
                 anchors.bottom: parent.bottom
-                recentStickers: chatContentRoot.rootStore.stickersModuleInst.recent
-                stickerPackList: chatContentRoot.rootStore.stickersModuleInst.stickerPacks
+                recentStickers: root.rootStore.stickersModuleInst.recent
+                stickerPackList: root.rootStore.stickersModuleInst.stickerPacks
                 chatType: chatContentModule? chatContentModule.chatDetails.type : Constants.chatType.unknown
+
+                Binding on chatInputPlaceholder {
+                    when: root.isBlocked
+                    value: qsTr("This user has been blocked.")
+                }
+
                 onSendTransactionCommandButtonClicked: {
                     if(!chatContentModule) {
                         console.debug("error on sending transaction command - chat content module is not set")
@@ -498,16 +494,16 @@ ColumnLayout {
                     }
 
                     if (Utils.getContactDetailsAsJson(chatContentModule.getMyChatId()).ensVerified) {
-                        Global.openPopup(chatContentRoot.sendTransactionWithEnsModal)
+                        Global.openPopup(root.sendTransactionWithEnsModal)
                     } else {
-                        Global.openPopup(chatContentRoot.sendTransactionNoEnsModal)
+                        Global.openPopup(root.sendTransactionNoEnsModal)
                     }
                 }
                 onReceiveTransactionCommandButtonClicked: {
-                    Global.openPopup(chatContentRoot.receiveTransactionModal)
+                    Global.openPopup(root.receiveTransactionModal)
                 }
                 onStickerSelected: {
-                    chatContentRoot.rootStore.sendSticker(chatContentModule.getMyChatId(),
+                    root.rootStore.sendSticker(chatContentModule.getMyChatId(),
                                                           hashId,
                                                           chatInput.isReply ? chatInput.replyMessageId : "",
                                                           packId)
@@ -520,14 +516,14 @@ ColumnLayout {
                         return
                     }
 
-                    if(chatContentRoot.rootStore.sendMessage(event,
+                    if(root.rootStore.sendMessage(event,
                                                              chatInput.textInput.text,
                                                              chatInput.isReply? chatInput.replyMessageId : "",
                                                              chatInput.fileUrls
                                                              ))
                     {
-                        sendMessageSound.stop();
-                        Qt.callLater(sendMessageSound.play);
+                        Global.sendMessageSound.stop();
+                        Qt.callLater(Global.sendMessageSound.play);
 
                         chatInput.textInput.clear();
                         chatInput.textInput.textFormat = TextEdit.PlainText;

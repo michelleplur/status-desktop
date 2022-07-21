@@ -4,6 +4,7 @@ import ../../../app/core/tasks/[qt, threadpool]
 import ../../../app/core/signals/types
 import ../../../app/core/eventemitter
 import ../../../app/global/global_singleton
+import ../../../backend/accounts as status_accounts
 import ../../../backend/messages as status_go
 import ../contacts/service as contact_service
 import ../token/service as token_service
@@ -158,24 +159,10 @@ QtObject:
     # if (not chats[0].active):
     #   return
 
-
-    # In case of reply to a message we're receiving 2 messages in the `messages` array (replied message
-    # and a message one replied to) but we actually need only a new replied message, that's why we need to filter
-    # messages here.
-    # We are not sure if we can receive more replies here, also ordering in the `messages` array is not
-    # the same (once we may have replied messages before once after the messages one replied to), that's why we are
-    # covering the most general case here.
-    var messagesOneRepliedTo: seq[string]
-
     for msg in messages:
       if(msg.editedAt > 0):
         let data = MessageEditedArgs(chatId: msg.localChatId, message: msg)
         self.events.emit(SIGNAL_MESSAGE_EDITED, data)
-      if msg.responseTo.len > 0:
-        messagesOneRepliedTo.add(msg.responseTo)
-
-    for msgId in messagesOneRepliedTo:
-      removeMessageWithId(messages, msgId)
 
     for i in 0 ..< chats.len:
       if(chats[i].chatType == ChatType.Unknown):
@@ -304,14 +291,22 @@ QtObject:
     return self.pinnedMsgCursor[chatId]
 
   proc getTransactionDetails*(self: Service, message: MessageDto): (string, string) =
-    # TODO(alaibe): handle multi network
-    let networkDto = self.networkService.getNetworks()[0]
-    let ethereum = newTokenDto("Ethereum", networkDto.chainId, parseAddress(ZERO_ADDRESS), "ETH", 18, true)
-    let tokenContract = if message.transactionParameters.contract == "" : ethereum else: self.tokenService.findTokenByAddress(networkDto, parseAddress(message.transactionParameters.contract))
-    let tokenContractStr = if tokenContract == nil: "{}" else: $(Json.encode(tokenContract))
-    var weiStr = if tokenContract == nil: "0" else: service_conversion.wei2Eth(message.transactionParameters.value, tokenContract.decimals)
+    let networksDto = self.networkService.getNetworks()
+    var token = newTokenDto(networksDto[0].nativeCurrencyName, networksDto[0].chainId, parseAddress(ZERO_ADDRESS), networksDto[0].nativeCurrencySymbol, networksDto[0].nativeCurrencyDecimals, true)
+    
+    if message.transactionParameters.contract != "":
+      for networkDto in networksDto:
+        let tokenFound = self.tokenService.findTokenByAddress(networkDto, parseAddress(message.transactionParameters.contract))
+        if tokenFound == nil:
+          continue
+
+        token = tokenFound
+        break
+    
+    let tokenStr = $(Json.encode(token))
+    var weiStr = service_conversion.wei2Eth(message.transactionParameters.value, token.decimals)
     weiStr.trimZeros()
-    return (tokenContractStr, weiStr)
+    return (tokenStr, weiStr)
 
   proc onAsyncLoadMoreMessagesForChat*(self: Service, response: string) {.slot.} =
     let responseObj = response.parseJson
@@ -660,7 +655,7 @@ QtObject:
     )
     self.threadpool.start(arg)
 
-# See render-inline in status-react/src/status_im/ui/screens/chat/message/message.cljs
+# See render-inline in status-mobile/src/status_im/ui/screens/chat/message/message.cljs
 proc renderInline(self: Service, parsedText: ParsedText): string =
   let value = escape_html(parsedText.literal)
     .multiReplace(("\r\n", "<br/>"))
@@ -679,8 +674,11 @@ proc renderInline(self: Service, parsedText: ParsedText): string =
     of PARSED_TEXT_CHILD_TYPE_STRONG_EMPH:
       result = fmt(" <strong><em>{value}</em></strong> ")
     of PARSED_TEXT_CHILD_TYPE_MENTION:
-      let contactDto = self.contactService.getContactById(value)
-      result = fmt("<a href=\"//{value}\" class=\"mention\">{contactDto.userNameOrAlias()}</a>")
+      var id = value
+      if isCompressedPubKey(id):
+        id = status_accounts.decompressPk(id).result
+      let contactDto = self.contactService.getContactById(id)
+      result = fmt("<a href=\"//{id}\" class=\"mention\">{contactDto.userNameOrAlias()}</a>")
     of PARSED_TEXT_CHILD_TYPE_STATUS_TAG:
       result = fmt("<a href=\"#{value}\" class=\"status-tag\">#{value}</a>")
     of PARSED_TEXT_CHILD_TYPE_DEL:
@@ -690,7 +688,7 @@ proc renderInline(self: Service, parsedText: ParsedText): string =
     else:
       result = fmt(" {value} ")
 
-# See render-block in status-react/src/status_im/ui/screens/chat/message/message.cljs
+# See render-block in status-mobile/src/status_im/ui/screens/chat/message/message.cljs
 proc getRenderedText*(self: Service, parsedTextArray: seq[ParsedText]): string =
   for parsedText in parsedTextArray:
     case parsedText.type:

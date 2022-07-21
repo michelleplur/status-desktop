@@ -5,7 +5,7 @@ import ../main/communities/models/[pending_request_item, pending_request_model]
 type
   SectionType* {.pure.} = enum
     Chat = 0
-    Community,    
+    Community,
     Wallet,
     Browser,
     ProfileSettings,
@@ -25,6 +25,7 @@ type
     bannerImageData: string
     icon: string
     color: string
+    tags: string
     hasNotification: bool
     notificationsCount: int
     active: bool
@@ -54,6 +55,7 @@ proc initItem*(
     bannerImageData = "",
     icon = "",
     color = "",
+    tags = "",
     hasNotification = false,
     notificationsCount: int = 0,
     active = false,
@@ -82,6 +84,7 @@ proc initItem*(
   result.bannerImageData = bannerImageData
   result.icon = icon
   result.color = color
+  result.tags = tags
   result.hasNotification = hasNotification
   result.notificationsCount = notificationsCount
   result.active = active
@@ -117,6 +120,7 @@ proc `$`*(self: SectionItem): string =
     bannerImageData: {self.bannerImageData},
     icon: {self.icon},
     color: {self.color},
+    tags: {self.tags},
     hasNotification: {self.hasNotification},
     notificationsCount:{self.notificationsCount},
     active:{self.active},
@@ -166,6 +170,9 @@ proc icon*(self: SectionItem): string {.inline.} =
 
 proc color*(self: SectionItem): string {.inline.} =
   self.color
+
+proc tags*(self: SectionItem): string {.inline.} =
+  self.tags
 
 proc hasNotification*(self: SectionItem): bool {.inline.} =
   self.hasNotification
@@ -224,6 +231,10 @@ proc members*(self: SectionItem): member_model.Model {.inline.} =
 proc hasMember*(self: SectionItem, pubkey: string): bool =
   self.membersModel.isContactWithIdAdded(pubkey)
 
+proc setOnlineStatusForMember*(self: SectionItem, pubKey: string,
+    onlineStatus: OnlineStatus) =
+  self.membersModel.setOnlineStatus(pubkey, onlineStatus)
+
 proc updateMember*(
     self: SectionItem,
     pubkey: string,
@@ -231,8 +242,11 @@ proc updateMember*(
     ensName: string,
     nickname: string,
     alias: string,
-    image: string) =
-  self.membersModel.updateItem(pubkey, name, ensName, nickname, alias, image)
+    image: string,
+    isContact: bool,
+    isUntrustworthy: bool) =
+  self.membersModel.updateItem(pubkey, name, ensName, nickname, alias, image, isContact,
+    isUntrustworthy)
 
 proc pendingRequestsToJoin*(self: SectionItem): PendingRequestModel {.inline.} =
   self.pendingRequestsToJoinModel

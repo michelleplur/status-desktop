@@ -231,7 +231,7 @@ method onSearchMessagesDone*(self: Module, messages: seq[MessageDto]) =
       continue
 
     let chatDto = self.controller.getChatDetails("", m.chatId)
-    var (senderName, senderImage) = self.controller.getContactNameAndImage(m.`from`)
+    var (senderName, senderImage, _) = self.controller.getContactNameAndImage(m.`from`)
     if(m.`from` == singletonInstance.userProfile.getPubKey()):
       senderName = "You"
 
@@ -267,3 +267,7 @@ method onSearchMessagesDone*(self: Module, messages: seq[MessageDto]) =
 
 method resultItemClicked*(self: Module, itemId: string) =
   self.controller.resultItemClicked(itemId)
+
+method updateSearchLocationIfPointToChatWithId*(self: Module, chatId: string) =
+  if self.controller.activeChatId() == chatId:
+    self.controller.setSearchLocation(self.controller.activeSectionId(), "")

@@ -5,7 +5,6 @@ import Qt.labs.platform 1.1
 import Qt.labs.settings 1.0
 import QtQuick.Window 2.12
 import QtQml 2.13
-import QtQuick.Window 2.0
 import QtQuick.Controls.Universal 2.12
 
 import DotherSide 0.1
@@ -31,11 +30,11 @@ StatusWindow {
     color: Style.current.background
     title: {
         // Set application settings
-        //% "Status Desktop"
-        Qt.application.name = qsTrId("status-desktop")
+        Qt.application.name = "Status Desktop"
+        Qt.application.displayName = qsTr("Status Desktop")
         Qt.application.organization = "Status"
         Qt.application.domain = "status.im"
-        return Qt.application.name
+        return Qt.application.displayName
     }
     visible: true
 
@@ -61,7 +60,7 @@ StatusWindow {
         }
 
         applicationWindow.visibility = visibility;
-        if (visibility == Window.Windowed) {
+        if (visibility === Window.Windowed) {
             applicationWindow.x = geometry.x;
             applicationWindow.y = geometry.y;
             applicationWindow.width = geometry.width;
@@ -74,7 +73,7 @@ StatusWindow {
             return;
 
         localAppSettings.visibility = applicationWindow.visibility;
-        if (applicationWindow.visibility == Window.Windowed) {
+        if (applicationWindow.visibility === Window.Windowed) {
             localAppSettings.geometry = Qt.rect(applicationWindow.x, applicationWindow.y,
                                                 applicationWindow.width, applicationWindow.height);
         }
@@ -88,7 +87,7 @@ StatusWindow {
     Action {
         shortcut: StandardKey.FullScreen
         onTriggered: {
-            if (visibility === Window.FullScreen) {
+            if (applicationWindow.visibility === Window.FullScreen) {
                 showNormal()
             } else {
                 showFullScreen()
@@ -99,7 +98,7 @@ StatusWindow {
     Action {
         shortcut: "Ctrl+M"
         onTriggered: {
-            if (visibility === Window.Minimized) {
+            if (applicationWindow.visibility === Window.Minimized) {
                 showNormal()
             } else {
                 showMinimized()
@@ -126,12 +125,12 @@ StatusWindow {
     Connections {
         target: startupModule
 
-        onStartUpUIRaised: {
+        function onStartUpUIRaised() {
             applicationWindow.appIsReady = true;
             applicationWindow.storeAppState();
         }
 
-        onAppStateChanged: {
+        function onAppStateChanged(state) {
             if(state === Constants.appState.main) {
                 // We set main module to the Global singleton once user is logged in and we move to the main app.
                 Global.mainModuleInst = mainModule
@@ -155,7 +154,7 @@ StatusWindow {
     //! Workaround for custom QQuickWindow
     Connections {
         target: applicationWindow
-        onClosing: {
+        function onClosing(close) {
             if (Qt.platform.os === "osx") {
                 loader.sourceComponent = undefined
                 close.accepted = true
@@ -177,7 +176,7 @@ StatusWindow {
 	Connections {
         target: singleInstance
 
-        onSecondInstanceDetected: {
+        function onSecondInstanceDetected() {
             console.log("User attempted to run the second instance of the application")
             // activating this instance to give user visual feedback
             applicationWindow.show()
@@ -185,7 +184,7 @@ StatusWindow {
             applicationWindow.requestActivate()
         }
 
-        onEventReceived: {
+        function onEventReceived(eventStr) {
             let event = JSON.parse(eventStr)
             if (event.hasOwnProperty("uri")) {
                 // Not Refactored Yet
@@ -231,21 +230,20 @@ StatusWindow {
         icon.source: {
             if (production) {
                 if (Qt.platform.os == "osx")
-                    return "imports/assets/images/status-logo-round-rect.svg"
+                    return "imports/assets/icons/status-logo-round-rect.svg"
                 else
-                    return "imports/assets/images/status-logo-circle.svg"
+                    return "imports/assets/icons/status-logo-circle.svg"
             } else {
                 if (Qt.platform.os == "osx")
-                    return "imports/assets/images/status-logo-dev-round-rect.svg"
+                    return "imports/assets/icons/status-logo-dev-round-rect.svg"
                 else
-                    return "imports/assets/images/status-logo-dev-circle.svg"
+                    return "imports/assets/icons/status-logo-dev-circle.svg"
             }
         }
 
         menu: Menu {
             MenuItem {
-                //% "Open Status"
-                text: qsTrId("open-status")
+                text: qsTr("Open Status")
                 onTriggered: {
                     applicationWindow.makeStatusAppActive()
                 }
@@ -255,8 +253,7 @@ StatusWindow {
             }
 
             MenuItem {
-                //% "Quit"
-                text: qsTrId("quit")
+                text: qsTr("Quit")
                 onTriggered: Qt.quit()
             }
         }

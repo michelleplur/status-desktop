@@ -15,13 +15,12 @@ StatusModal {
     id: popup
     property var store
     property var communitySectionModule
-    property var pendingRequestsToJoin
+    property var communityData
     onOpened: {
         contentItem.errorText.text = ""
     }
 
-    //% "Membership requests"
-    header.title: qsTrId("membership-requests")
+    header.title: qsTr("Membership requests")
     header.subTitle: contentItem.membershipRequestList.count
 
     contentItem: Column {
@@ -55,17 +54,15 @@ StatusModal {
             ListView {
                 id: membershipRequestList
                 anchors.fill: parent
-                model: popup.pendingRequestsToJoin
+                model: popup.communityData.pendingRequestsToJoin
                 clip: true
 
                 delegate: StatusListItem {
                     anchors.horizontalCenter: parent.horizontalCenter
                     property var contactDetails: Utils.getContactDetailsAsJson(model.pubKey)
 
-                    property string displayName: contactDetails.displayName || root.store.generateAlias(model.pubKey)
-
+                    property string displayName: contactDetails.displayName || popup.store.generateAlias(model.pubKey)
                     image.source: contactDetails.thumbnailImage
-
                     title: displayName
 
                     components: [

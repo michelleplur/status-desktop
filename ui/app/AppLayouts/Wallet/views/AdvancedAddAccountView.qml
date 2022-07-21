@@ -97,7 +97,6 @@ ColumnLayout {
 
     SelectGeneratedAccount {
         id: selectGeneratedAccount
-        Layout.margins: Style.current.padding
         Component.onCompleted: {
             advancedSection.addAccountType = Qt.binding(function() {return addAccountType})
             advancedSection.derivedFromAddress = Qt.binding(function() {return derivedFromAddress})
@@ -113,8 +112,7 @@ ColumnLayout {
         id: importSeedPhrasePanel
         Layout.preferredWidth: parent.width
         Layout.preferredHeight: visible ? importSeedPhrasePanel.preferredHeight: 0
-        Layout.leftMargin: Style.current.padding
-        Layout.rightMargin: Style.current.padding
+        Layout.leftMargin: (Style.current.halfPadding/4)
         visible: advancedSection.addAccountType === SelectGeneratedAccount.AddAccountType.ImportSeedPhrase && advancedSection.visible
         onMnemonicStringChanged: {
             advancedSection.mnemonicText = mnemonicString
@@ -128,38 +126,34 @@ ColumnLayout {
     StatusInput {
         id: addressInput
         visible: advancedSection.addAccountType === SelectGeneratedAccount.AddAccountType.WatchOnly && advancedSection.visible
-        //% "Enter address..."
-        input.placeholderText: qsTrId("enter-address...")
-        //% "Account address"
-        label: qsTrId("wallet-key-title")
+        input.placeholderText: qsTr("Enter address...")
+        label: qsTr("Account address")
         validators: [
             StatusAddressValidator {
-                //% "This needs to be a valid address (starting with 0x)"
-                errorMessage: qsTrId("this-needs-to-be-a-valid-address-(starting-with-0x)")
+                errorMessage: qsTr("This needs to be a valid address (starting with 0x)")
             },
             StatusMinLengthValidator {
-                //% "You need to enter an address"
-                errorMessage: qsTrId("you-need-to-enter-an-address")
+                errorMessage: qsTr("You need to enter an address")
                 minLength: 1
             }
         ]
     }
 
     RowLayout {
-        Layout.margins: Style.current.padding
-        Layout.preferredWidth: parent.width
+        Layout.fillWidth: true
+        Layout.rightMargin: 2
         spacing: Style.current.bigPadding
         visible: advancedSection.addAccountType !== SelectGeneratedAccount.AddAccountType.ImportPrivateKey &&
                  advancedSection.addAccountType !== SelectGeneratedAccount.AddAccountType.WatchOnly
         DerivationPathsPanel {
             id: derivationPathsPanel
-            Layout.preferredWidth: 213
+            Layout.preferredWidth: ((parent.width - (Style.current.bigPadding/2))/2)
             Layout.alignment: Qt.AlignTop
             Component.onCompleted: advancedSection.path = Qt.binding(function() { return derivationPathsPanel.path})
         }
         DerivedAddressesPanel {
             id: derivedAddressesPanel
-            Layout.preferredWidth: 213
+            Layout.preferredWidth: ((parent.width - (Style.current.bigPadding/2))/2)
             Layout.alignment: Qt.AlignTop
             Component.onCompleted: advancedSection.pathSubFix = Qt.binding(function() { return derivedAddressesPanel.pathSubFix})
         }

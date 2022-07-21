@@ -22,7 +22,6 @@ StatusModal {
     property string finalButtonLabel: "Request address"
     property var sendChatCommand: function () {}
     property bool isRequested: false
-    property bool isContact: false
 
     id: root
     anchors.centerIn: parent
@@ -48,8 +47,7 @@ StatusModal {
             TransactionFormGroup {
                 id: group1
                 headerText: root.commandTitle
-                //% "Continue"
-                footerText: qsTrId("continue")
+                footerText: qsTr("Continue")
 
                 StatusAccountSelector {
                     id: selectFromAccount
@@ -65,10 +63,8 @@ StatusModal {
                     width: stack.width
                     label: {
                         return root.isRequested ?
-                            //% "Receive on account"
-                            qsTrId("receive-on-account") :
-                            //% "From account"
-                            qsTrId("from-account")
+                            qsTr("Receive on account") :
+                            qsTr("From account")
                     }
                 }
                 SeparatorWithIcon {
@@ -83,8 +79,7 @@ StatusModal {
                     anchors.right: selectRecipient.right
                     anchors.bottom: selectRecipient.top
                     anchors.bottomMargin: -Style.current.padding
-                    //% "Address request required"
-                    text: qsTrId("address-request-required")
+                    text: qsTr("Address request required")
                     color: Theme.palette.dangerColor1
                     visible: addressRequiredValidator.isWarn
                 }
@@ -94,10 +89,8 @@ StatusModal {
                     accounts: root.store.accounts
                     contactsStore: root.contactsStore
                     label: root.isRequested ?
-                      //% "From"
-                      qsTrId("from") :
-                      //% "To"
-                      qsTrId("to")
+                      qsTr("From") :
+                      qsTr("To")
                     anchors.top: separator.bottom
                     anchors.topMargin: 10
                     width: stack.width
@@ -109,8 +102,7 @@ StatusModal {
             TransactionFormGroup {
                 id: group2
                 headerText: root.commandTitle
-                //% "Preview"
-                footerText: qsTrId("preview")
+                footerText: qsTr("Preview")
 
                 AssetAndAmountInput {
                     id: txtAmount
@@ -126,10 +118,8 @@ StatusModal {
             TransactionFormGroup {
                 id: group3
                 headerText: root.isRequested ?
-                    //% "Preview"
-                    qsTrId("preview") :
-                    //% "Transaction preview"
-                    qsTrId("transaction-preview")
+                    qsTr("Preview") :
+                    qsTr("Transaction preview")
                 footerText: root.finalButtonLabel
 
                 TransactionPreview {
@@ -168,8 +158,7 @@ StatusModal {
     rightButtons: [
         StatusButton {
             id: btnNext
-            //% "Next"
-            text: qsTrId("next")
+            text: qsTr("Next")
             enabled: stack.currentGroup.isValid && !stack.currentGroup.isPending
             onClicked: {
                 const validity = stack.currentGroup.validate()

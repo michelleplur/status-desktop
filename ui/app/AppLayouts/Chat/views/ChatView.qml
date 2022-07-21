@@ -29,6 +29,7 @@ StatusAppThreePanelLayout {
     property RootStore rootStore
 
     property Component pinnedMessagesListPopupComponent
+    property Component membershipRequestPopup
     property var emojiPopup
     property bool stickersLoaded: false
 
@@ -36,6 +37,8 @@ StatusAppThreePanelLayout {
     signal communityManageButtonClicked()
     signal profileButtonClicked()
     signal openAppSearch()
+    signal importCommunityClicked()
+    signal createCommunityClicked()
 
     Connections {
         target: root.rootStore.stickersStore.stickersModule
@@ -52,6 +55,13 @@ StatusAppThreePanelLayout {
         }
     }
 
+    Connections {
+        target: Global
+        onCloseCreateChatView: {
+            root.rootStore.openCreateChat = false
+        }
+    }
+
     leftPanel: Loader {
         id: contactColumnLoader
         sourceComponent: root.rootStore.chatCommunitySectionModule.isCommunity()?
@@ -64,8 +74,7 @@ StatusAppThreePanelLayout {
         parentModule: root.rootStore.chatCommunitySectionModule
         rootStore: root.rootStore
         contactsStore: root.contactsStore
-        chatSectionModule: root.rootStore.chatCommunitySectionModule
-        pinnedMessagesPopupComponent: root.pinnedMessagesListPopupComponent
+        pinnedMessagesListPopupComponent: root.pinnedMessagesListPopupComponent
         stickersLoaded: root.stickersLoaded
         emojiPopup: root.emojiPopup
         onOpenStickerPackPopup: {
@@ -127,6 +136,12 @@ StatusAppThreePanelLayout {
             onOpenAppSearch: {
                 root.openAppSearch()
             }
+            onImportCommunityClicked: {
+                root.importCommunityClicked();
+            }
+            onCreateCommunityClicked: {
+                root.createCommunityClicked();
+            }
         }
     }
 
@@ -138,6 +153,7 @@ StatusAppThreePanelLayout {
             emojiPopup: root.emojiPopup
             hasAddedContacts: root.hasAddedContacts
             pinnedMessagesPopupComponent: root.pinnedMessagesListPopupComponent
+            membershipRequestPopup: root.membershipRequestPopup
             onInfoButtonClicked: root.communityInfoButtonClicked()
             onManageButtonClicked: root.communityManageButtonClicked()
         }
@@ -148,7 +164,6 @@ StatusAppThreePanelLayout {
         GroupInfoPopup {
             chatSectionModule: root.rootStore.chatCommunitySectionModule
             store: root.rootStore
-            pinnedMessagesPopupComponent: root.pinnedMessagesListPopupComponent
         }
     }
 
@@ -165,12 +180,11 @@ StatusAppThreePanelLayout {
     ConfirmationDialog {
         id: removeContactConfirmationDialog
         // % "Remove contact"
-        header.title: qsTrId("remove-contact")
-        //% "Are you sure you want to remove this contact?"
-        confirmationText: qsTrId("are-you-sure-you-want-to-remove-this-contact-")
+        header.title: qsTr("Remove contact")
+        confirmationText: qsTr("Are you sure you want to remove this contact?")
         onConfirmButtonClicked: {
             let pk = chatColumn.contactToRemove
-            if (Utils.getContactDetailsAsJson(pk).isContact) {
+            if (Utils.getContactDetailsAsJson(pk).isAdded) {
                 root.contactsStore.removeContact(pk)
             }
             removeContactConfirmationDialog.parentPopup.close();
@@ -183,11 +197,15 @@ StatusAppThreePanelLayout {
         store: root.rootStore
 
         onOpenProfileClicked: {
-            Global.openProfilePopup(publicKey)
+            Global.openProfilePopup(publicKey, null, state)
         }
         onCreateOneToOneChat: {
             Global.changeAppSectionBySectionType(Constants.appSection.chat)
             root.rootStore.chatCommunitySectionModule.createOneToOneChat(communityId, chatId, ensName)
         }
+    }
+
+    Component.onCompleted: {
+        rootStore.groupInfoPopupComponent = groupInfoPopupComponent;
     }
 }

@@ -38,9 +38,7 @@ Page {
         id: container
         width: 425
         height: 513
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 143
+        anchors.centerIn: parent
 
         Image {
             id: keysImg
@@ -54,7 +52,6 @@ Page {
 
         StyledText {
             id: txtTitle1
-            //% "Get your keys"
             text: qsTr("Welcome to Status")
             anchors.topMargin: Style.current.padding
             font.bold: true

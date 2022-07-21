@@ -10,12 +10,27 @@ import shared.panels.chat 1.0
 import shared.views.chat 1.0
 import shared.controls.chat 1.0
 
-Column {
+Loader {
     id: root
 
     width: parent.width
-    anchors.right: !isCurrentUser ? undefined : parent.right
     z: (typeof chatLogView === "undefined") ? 1 : (chatLogView.count - index)
+
+    sourceComponent: {
+        switch(contentType) {
+            case Constants.messageContentType.chatIdentifier:
+                return channelIdentifierComponent
+            case Constants.messageContentType.fetchMoreMessagesButton:
+                return fetchMoreMessagesButtonComponent
+            case Constants.messageContentType.systemMessagePrivateGroupType:
+                return privateGroupHeaderComponent
+            case Constants.messageContentType.gapType:
+                return gapComponent
+            default:
+                return compactMessageComponent
+
+        }
+    }
 
     property var store
     property var messageStore
@@ -23,6 +38,7 @@ Column {
     property var contactsStore
     property var messageContextMenu
     property string channelEmoji
+    property bool isActiveChannel: false
 
     property var emojiPopup
 
@@ -40,6 +56,7 @@ Column {
     property string senderIcon: ""
     property bool amISender: false
     property bool senderIsAdded: false
+    property int senderTrustStatus: Constants.trustStatus.unknown
     readonly property string senderIconToShow: {
         if ((!senderIsAdded &&
             Global.privacyModuleInst.profilePicturesVisibility !==
@@ -192,12 +209,8 @@ Column {
             messageContextMenu.messageSenderId = obj.senderId
             messageContextMenu.selectedUserPublicKey = obj.senderId
             messageContextMenu.selectedUserDisplayName = obj.senderDisplayName
-            messageContextMenu.selectedUserIcon = obj.senderIcon
+            messageContextMenu.selectedUserIcon = obj.senderIconToShow
         }
-
-
-        messageContextMenu.x = messageContextMenu.setXPosition()
-        messageContextMenu.y = messageContextMenu.setYPosition()
 
         messageContextMenu.popup()
     }
@@ -210,7 +223,7 @@ Column {
 //    }
 
     function startMessageFoundAnimation() {
-        messageLoader.item.startMessageFoundAnimation();
+        root.item.startMessageFoundAnimation();
     }
     /////////////////////////////////////////////
 
@@ -234,27 +247,6 @@ Column {
 //            }
 //        }
 //    }
-
-    Loader {
-        id: messageLoader
-        active: root.visible
-        width: parent.width
-        sourceComponent: {
-            switch(contentType) {
-                case Constants.messageContentType.chatIdentifier:
-                    return channelIdentifierComponent
-                case Constants.messageContentType.fetchMoreMessagesButton:
-                    return fetchMoreMessagesButtonComponent
-                case Constants.messageContentType.systemMessagePrivateGroupType:
-                    return privateGroupHeaderComponent
-                case Constants.messageContentType.gapType:
-                    return gapComponent
-                default:
-                    return compactMessageComponent
-
-            }
-        }
-    }
 
     Component {
         id: gapComponent
@@ -289,11 +281,7 @@ Column {
             chatColor: root.messageStore.getChatColor()
             chatEmoji: root.channelEmoji
             amIChatAdmin: root.messageStore.amIChatAdmin()
-            chatIcon: root.senderIcon
-            didIJoinedChat: root.messageStore.didIJoinedChat()
-
-            onJoinChatClicked: root.messageStore.joinGroupChat()
-            onRejectJoiningChatClicked: root.messageStore.leaveChat()
+            chatIcon: root.senderIconToShow
         }
     }
 
@@ -334,13 +322,16 @@ Column {
         CompactMessageView {
             container: root
             store: root.store
+            message: root.message
             messageStore: root.messageStore
             usersStore: root.usersStore
             contactsStore: root.contactsStore
             messageContextMenu: root.messageContextMenu
             contentType: root.messageContentType
             isChatBlocked: root.isChatBlocked
+            isActiveChannel: root.isActiveChannel
             emojiPopup: root.emojiPopup
+            senderTrustStatus: root.senderTrustStatus
 
             communityId: root.communityId
             stickersLoaded: root.stickersLoaded
@@ -353,6 +344,8 @@ Column {
             editModeOn: root.editModeOn
             linkUrls: root.linkUrls
             isInPinnedPopup: root.isInPinnedPopup
+            pinnedMessage: root.pinnedMessage
+            canPin: !!messageStore && messageStore.getNumberOfPinnedMessages() < Constants.maxNumberOfPins
 
             transactionParams: root.transactionParams
 

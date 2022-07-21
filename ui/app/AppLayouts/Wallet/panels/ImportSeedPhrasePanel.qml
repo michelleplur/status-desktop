@@ -35,16 +35,13 @@ GridView {
     function validate() {
         _internal.errorString  = ""
         if (!Utils.isMnemonic(mnemonicString)) {
-            //% "Invalid seed phrase"
-            _internal.errorString = qsTrId("custom-seed-phrase")
+            _internal.errorString = qsTr("Invalid seed phrase")
         } else {
             _internal.errorString = RootStore.vaildateMnemonic(mnemonicString)
             const regex = new RegExp('word [a-z]+ not found in the dictionary', 'i');
             if (regex.test(_internal.errorString)) {
-                //% "Invalid seed phrase"
-                _internal.errorString = qsTrId("custom-seed-phrase") + '. ' +
-                        //% "This seed phrase doesn't match our supported dictionary. Check for misspelled words."
-                        qsTrId("custom-seed-phrase-text-1")
+                _internal.errorString = qsTr("Invalid seed phrase") + '. ' +
+                        qsTr("This seed phrase doesn't match our supported dictionary. Check for misspelled words.")
             }
         }
         return _internal.errorString === ""
@@ -52,8 +49,8 @@ GridView {
 
     QtObject {
         id: _internal
-        property int seedPhraseInputHeight: 44
-        property int seedPhraseInputWidth: 220
+        property int seedPhraseInputWidth: (parent.width/2)
+        property int seedPhraseInputHeight: 48
         property var mnemonicInput: []
         property string errorString:  ""
         readonly property var seedPhraseWordsOptions: ([12, 18, 24])
@@ -69,8 +66,8 @@ GridView {
         }
     }
 
-    cellHeight: _internal.seedPhraseInputHeight + Style.current.halfPadding
-    cellWidth: _internal.seedPhraseInputWidth + Style.current.halfPadding
+    cellWidth: _internal.seedPhraseInputWidth
+    cellHeight: _internal.seedPhraseInputHeight
     interactive: false
     z: 100000
 
@@ -164,8 +161,8 @@ GridView {
 
     delegate: StatusSeedPhraseInput {
         id: statusSeedInput
-        width: _internal.seedPhraseInputWidth
-        height: _internal.seedPhraseInputHeight
+        width: grid.cellWidth - (Style.current.halfPadding/2)
+        height: (grid.cellHeight - Style.current.halfPadding)
         textEdit.errorMessageCmp.visible: false
         leftComponentText: index + 1
         inputList: BIP39_en { }
@@ -226,12 +223,10 @@ GridView {
     }
     footer: Item {
         id: footerC
-
         function switchToIndex(index) {
             changeSeedNbWordsTabBar.currentIndex = index
         }
-
-        width: grid.width - Style.current.padding
+        width: grid.width - (Style.current.halfPadding/2)
         height: changeSeedNbWordsTabBar.height + errorMessage.height + Style.current.padding*2
         StatusBaseText {
             id: errorMessage
@@ -252,9 +247,9 @@ GridView {
         }
         StatusSwitchTabBar {
             id: changeSeedNbWordsTabBar
+            width: parent.width
             anchors.top: errorMessage.bottom
             anchors.topMargin: Style.current.padding
-            anchors.horizontalCenter: parent.horizontalCenter
             Repeater {
                 model: _internal.seedPhraseWordsOptions
                  StatusSwitchTabButton {

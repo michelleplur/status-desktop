@@ -36,13 +36,17 @@ QtObject {
        return root.contactsModule.isMyMutualContact(pubKey)
     }
 
+    function isBlockedContact(pubKey) {
+       return root.contactsModule.isBlockedContact(pubKey)
+    }
+
+    function hasPendingContactRequest(pubKey) {
+       return root.contactsModule.hasPendingContactRequest(pubKey)
+    }
+
     function joinPrivateChat(pubKey) {
         Global.changeAppSectionBySectionType(Constants.appSection.chat)
         root.contactsModule.switchToOrCreateOneToOneChat(pubKey)
-    }
-
-    function addContact(pubKey) {
-        root.contactsModule.addContact(pubKey)
     }
 
     function unblockContact(pubKey) {
@@ -60,16 +64,66 @@ QtObject {
     function changeContactNickname(pubKey, nickname) {
         root.contactsModule.changeContactNickname(pubKey, nickname)
     }
-    
-    function acceptContactRequest(pubKey) {
-        root.contactsModule.addContact(pubKey)
+
+    function sendContactRequest(pubKey, message) {
+        root.contactsModule.sendContactRequest(pubKey, message)
     }
 
-    function rejectContactRequest(pubKey) {
-        root.contactsModule.rejectContactRequest(pubKey)
+    function acceptContactRequest(pubKey) {
+        root.contactsModule.acceptContactRequest(pubKey)
+    }
+
+    function dismissContactRequest(pubKey) {
+        root.contactsModule.dismissContactRequest(pubKey)
     }
 
     function removeContactRequestRejection(pubKey) {
         root.contactsModule.removeContactRequestRejection(pubKey)
+    }
+
+    function markUntrustworthy(pubKey) {
+        root.contactsModule.markUntrustworthy(pubKey)
+    }
+
+    function removeTrustStatus(pubKey) {
+        root.contactsModule.removeTrustStatus(pubKey)
+    }
+
+    function sendVerificationRequest(pubKey, challenge) {
+        root.contactsModule.sendVerificationRequest(pubKey, challenge);
+    }
+
+    function cancelVerificationRequest(pubKey) {
+        root.contactsModule.cancelVerificationRequest(pubKey);
+    }
+
+    function declineVerificationRequest(pubKey) {
+        root.contactsModule.declineVerificationRequest(pubKey);
+    }
+
+    function acceptVerificationRequest(pubKey, response) {
+        root.contactsModule.acceptVerificationRequest(pubKey, response);
+    }
+
+    function getVerificationDetailsFromAsJson(pubKey) {
+        let resp = root.contactsModule.getVerificationDetailsFromAsJson(pubKey);
+        return JSON.parse(resp);
+    }
+
+    function getSentVerificationDetailsAsJson(pubKey) {
+        let resp = root.contactsModule.getSentVerificationDetailsAsJson(pubKey);
+        return JSON.parse(resp);
+    }
+
+    function hasReceivedVerificationRequestFrom(pubKey) {
+        return root.contactsModule.hasReceivedVerificationRequestFrom(pubKey);
+    }
+
+    function verifiedTrusted(pubKey) {
+        root.contactsModule.verifiedTrusted(pubKey);
+    }
+
+    function verifiedUntrustworthy(pubKey) {
+        root.contactsModule.verifiedUntrustworthy(pubKey);
     }
 }

@@ -4,10 +4,27 @@ import "../Profile/stores"
 
 QtObject {
     id: root
+
+    property string locale: localAppSettings.locale
+
     property var mainModuleInst: mainModule
     property var aboutModuleInst: aboutModule
     property var communitiesModuleInst: communitiesModule
     property var observedCommunity: communitiesModuleInst.observedCommunity
+
+    property bool newVersionAvailable: false
+    property string latestVersion
+    property string downloadURL
+
+    function setLatestVersionInfo(newVersionAvailable, latestVersion, downloadURL) {
+        root.newVersionAvailable = newVersionAvailable;
+        root.latestVersion = latestVersion;
+        root.downloadURL = downloadURL;
+    }
+
+    function resetLastVersion(){
+        root.newVersionAvailable = false
+    }
 
     property AppSearchStore appSearchStore: AppSearchStore {
         appSearchModule: root.mainModuleInst.appSearchModule
@@ -52,18 +69,43 @@ QtObject {
 
     property var walletSectionTransactionsInst: walletSectionTransactions
 
-    property bool isMultiNetworkEnabled: localAccountSensitiveSettings.isMultiNetworkEnabled
-
-    property bool isCommunitiesPortalEnabled: localAccountSensitiveSettings.isCommunitiesPortalEnabled
-
     property var savedAddressesModel: walletSectionSavedAddresses.model
+
+    property var allNetworks: networksModule.all
+
+    property var disabledChainIds: []
+
+    function addRemoveDisabledChain(suggestedRoutes, chainID, isDisbaled) {
+        if(isDisbaled) {
+            disabledChainIds.push(chainID)
+        }
+        else {
+            for(var i = 0; i < disabledChainIds.length;i++) {
+                if(disabledChainIds[i] === chainID) {
+                    disabledChainIds.splice(i, 1)
+                }
+            }
+        }
+    }
+
+    function checkIfDisabledByUser(chainID) {
+        for(var i = 0; i < disabledChainIds.length;i++) {
+            if(disabledChainIds[i] === chainID) {
+                return true
+            }
+        }
+        return false
+    }
 
     function getEtherscanLink() {
         return profileSectionModule.ensUsernamesModule.getEtherscanLink()
     }
 
-    function createCommunity(communityName, communityDescription, checkedMembership, communityColor, communityImage, imageCropperModalaX, imageCropperModalaY, imageCropperModalbX, imageCropperModalbY) {
-        communitiesModuleInst.createCommunity(communityName, communityDescription, checkedMembership, communityColor, communityImage, imageCropperModalaX, imageCropperModalaY, imageCropperModalbX, imageCropperModalbY);
+    function createCommunity(communityName, communityDescription, checkedMembership, communityColor, communityTags,
+                             communityImage, imageCropperModalaX, imageCropperModalaY, imageCropperModalbX, imageCropperModalbY) {
+        communitiesModuleInst.createCommunity(communityName, communityDescription, checkedMembership, communityColor,
+                                              communityTags, communityImage, imageCropperModalaX, imageCropperModalaY,
+                                              imageCropperModalbX, imageCropperModalbY);
     }
 
     function copyToClipboard(text) {
@@ -99,6 +141,10 @@ QtObject {
         return JSON.parse(walletSectionTransactions.suggestedFees(chainId))
     }
 
+    function getEstimatedTime(chainId, maxFeePerGas) {
+       return walletSectionTransactions.getEstimatedTime(chainId, maxFeePerGas)
+    }
+
     function getChainIdForChat() {
         return walletSectionTransactions.getChainIdForChat()
     }
@@ -107,11 +153,17 @@ QtObject {
         return walletSectionTransactions.getChainIdForBrowser()
     }
 
-    function suggestedRoutes(account, amount, token) {
-        return JSON.parse(walletSectionTransactions.suggestedRoutes(account, amount, token)).networks
+    function suggestedRoutes(account, amount, token, disabledChainIds) {
+        return JSON.parse(walletSectionTransactions.suggestedRoutes(account, amount, token, disabledChainIds)).networks
     }
 
     function hex2Eth(value) {
         return globalUtils.hex2Eth(value)
+    }
+
+    function setCurrentUserStatus(newStatus) {
+        if (userProfileInst && userProfileInst.currentUserStatus !== newStatus) {
+            mainModuleInst.setCurrentUserStatus(newStatus)
+        }
     }
 }

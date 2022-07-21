@@ -1,44 +1,60 @@
 import QtQuick 2.13
 import QtQuick.Controls 2.13
 import QtQuick.Layouts 1.14
+import QtQml.Models 2.14
 
 import utils 1.0
 
 import StatusQ.Core 0.1
 import StatusQ.Core.Theme 0.1
 import StatusQ.Controls 0.1
-import StatusQ.Popups 0.1
+import StatusQ.Popups.Dialog 0.1
 
-StatusModal {
-    id: popup
+StatusDialog {
+    id: root
 
+    width: 480
     anchors.centerIn: parent
-    header.title: qsTrId("before-you-get-started---")
-    hasCloseButton: false
     closePolicy: Popup.NoAutoClose
 
-    contentItem: Item {
-        implicitHeight: childrenRect.height
-        width: popup.width
-        Column {
-            spacing: 12
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.leftMargin: 32
-            anchors.rightMargin: 32
+    header: StatusDialogHeader {
+        headline.title: qsTr("Before you get started...")
+        actions.closeButton.visible: false
+    }
 
-            Item { height: 12;  width: parent.width }
+    footer: StatusDialogFooter {
+        rightButtons: ObjectModel {
+            StatusButton {
+                objectName: "getStartedStatusButton"
+                enabled: acknowledge.checked && termsOfUse.checked
+                size: StatusBaseButton.Size.Large
+                font.weight: Font.Medium
+                text: qsTr("Get Started")
+                onClicked: root.close()
+            }
+        }
+    }
+
+    contentItem: Item {
+        Column {
+            width: 416
+            spacing: 16
+            anchors.centerIn: parent
 
             StatusCheckBox {
                 id: acknowledge
                 objectName: "acknowledgeCheckBox"
+                spacing: 8
+                font.pixelSize: 15
                 width: parent.width
-                text: qsTrId("i-acknowledge-that-status-desktop-is-in-beta-and-by-using-it--i-take-the-full-responsibility-for-all-risks-concerning-my-data-and-funds-")
+                text: qsTr("I acknowledge that Status Desktop is in Beta and by using it I take the full responsibility for all risks concerning my data and funds.")
             }
 
             StatusCheckBox {
                 id: termsOfUse
                 objectName: "termsOfUseCheckBox"
+                width: parent.width
+                font.pixelSize: 15
 
                 contentItem: Row {
                     spacing: 4
@@ -46,13 +62,15 @@ StatusModal {
 
                     StatusBaseText {
                         text: qsTr("I accept Status")
-                        color: Theme.palette.directColor1
+                        font.pixelSize: 15
                     }
 
                     StatusBaseText {
                         objectName: "termsOfUseLink"
-                        text: qsTrId("terms-of-service")
+                        text: qsTr("Terms of Use")
                         color: Theme.palette.primaryColor1
+                        font.pixelSize: 15
+                        font.weight: Font.Medium
 
                         MouseArea {
                             anchors.fill: parent
@@ -65,20 +83,22 @@ StatusModal {
                                 parent.font.underline = false
                             }
                             onClicked: {
-                                Qt.openUrlExternally("https://status.im/terms-of-service/")
+                                Qt.openUrlExternally("https://status.im/terms-of-use/")
                             }
                         }
                     }
 
                     StatusBaseText {
-                        text: " & "
-                        color: Theme.palette.directColor1
+                        text: "&"
+                        font.pixelSize: 15
                     }
 
                     StatusBaseText {
                         objectName: "privacyPolicyLink"
                         text: qsTr("Privacy Policy")
                         color: Theme.palette.primaryColor1
+                        font.pixelSize: 15
+                        font.weight: Font.Medium
 
                         MouseArea {
                             anchors.fill: parent
@@ -97,20 +117,6 @@ StatusModal {
                     }
                 }
             }
-
-            Item { height: 12;  width: parent.width }
         }
     }
-
-    rightButtons: [
-        StatusButton {
-            id: getStartedButton
-            objectName: "getStartedStatusButton"
-            enabled: acknowledge.checked && termsOfUse.checked
-            text: qsTrId("get-started")
-            onClicked: {
-                popup.close()
-            }
-        }
-    ]
 }

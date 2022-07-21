@@ -8,6 +8,7 @@ import ../../../../shared_models/message_reaction_item
 import ../../../../shared_models/message_transaction_parameters_item
 import ../../../../../global/global_singleton
 import ../../../../../core/eventemitter
+import ../../../../../../app_service/service/contacts/dto/contacts
 import ../../../../../../app_service/service/contacts/service as contact_service
 import ../../../../../../app_service/service/community/service as community_service
 import ../../../../../../app_service/service/chat/service as chat_service
@@ -92,18 +93,20 @@ proc createFetchMoreMessagesItem(self: Module): Item =
     stickerPack = -1,
     @[],
     newTransactionParametersItem("","","","","","",-1,""),
-    @[]
+    @[],
+    TrustStatus.Unknown
   )
 
 proc createChatIdentifierItem(self: Module): Item =
   let chatDto = self.controller.getChatDetails()
   var chatName = chatDto.name
+  var smallImage = ""
   var chatIcon = ""
   var senderIsAdded = false
   if(chatDto.chatType == ChatType.OneToOne):
     let sender = self.controller.getContactDetails(chatDto.id)
     senderIsAdded = sender.details.added
-    (chatName, chatIcon) = self.controller.getOneToOneChatNameAndImage()
+    (chatName, smallImage, chatIcon) = self.controller.getOneToOneChatNameAndImage()
 
   result = initItem(
     CHAT_IDENTIFIER_MESSAGE_ID,
@@ -127,7 +130,8 @@ proc createChatIdentifierItem(self: Module): Item =
     stickerPack = -1,
     @[],
     newTransactionParametersItem("","","","","","",-1,""),
-    @[]
+    @[],
+    TrustStatus.Unknown
   )
 
 proc checkIfMessageLoadedAndScrollToItIfItIs(self: Module): bool =
@@ -183,7 +187,7 @@ method newMessagesLoaded*(self: Module, messages: seq[MessageDto], reactions: se
         m.image,
         m.containsContactMentions(),
         m.seen,
-        m.timestamp,
+        m.whisperTimestamp,
         m.contentType.ContentType,
         m.messageType,
         sticker = self.controller.decodeContentHash(m.sticker.hash),
@@ -197,8 +201,9 @@ method newMessagesLoaded*(self: Module, messages: seq[MessageDto], reactions: se
           m.transactionParameters.transactionHash,
           m.transactionParameters.commandState,
           m.transactionParameters.signature),
-        m.mentionedUsersPks()
-      )
+        m.mentionedUsersPks(),
+        sender.details.trustStatus,
+        )
 
       for r in reactions:
         if(r.messageId == m.id):
@@ -270,7 +275,7 @@ method messageAdded*(self: Module, message: MessageDto) =
     message.image,
     message.containsContactMentions(),
     message.seen,
-    message.timestamp,
+    message.whisperTimestamp,
     message.contentType.ContentType,
     message.messageType,
     sticker = self.controller.decodeContentHash(message.sticker.hash),
@@ -284,7 +289,8 @@ method messageAdded*(self: Module, message: MessageDto) =
                     message.transactionParameters.transactionHash,
                     message.transactionParameters.commandState,
                     message.transactionParameters.signature),
-    message.mentionedUsersPks
+    message.mentionedUsersPks,
+    sender.details.trustStatus,
   )
 
   self.view.model().insertItemBasedOnTimestamp(item)
@@ -397,6 +403,7 @@ method updateContactDetails*(self: Module, contactId: string) =
       item.senderLocalName = updatedContact.details.localNickname
       item.senderIcon = updatedContact.icon
       item.senderIsAdded = updatedContact.details.added
+      item.senderTrustStatus = updatedContact.details.trustStatus
     if(item.messageContainsMentions):
       let (m, _, err) = self.controller.getMessageDetails(item.id)
       if(err.len == 0):
@@ -472,22 +479,8 @@ method requestMoreMessages*(self: Module) =
 method fillGaps*(self: Module, messageId: string) =
   self.controller.fillGaps(messageId)
 
-method joinGroupChat*(self: Module) =
-  self.controller.joinGroupChat()
-
 method leaveChat*(self: Module) =
   self.controller.leaveChat()
-
-method didIJoinedChat*(self: Module): bool =
-  let chatDto = self.controller.getChatDetails()
-  if(chatDto.chatType != ChatType.PrivateGroupChat):
-    return true
-
-  let myPublicKey = singletonInstance.userProfile.getPubKey()
-  for member in chatDto.members:
-    if (member.id == myPublicKey):
-      return member.joined
-  return true
 
 method onChatMemberUpdated*(self: Module, publicKey: string, admin: bool, joined: bool) =
   let chatDto = self.controller.getChatDetails()
@@ -499,3 +492,6 @@ method onChatMemberUpdated*(self: Module, publicKey: string, admin: bool, joined
     return
 
   self.view.model().refreshItemWithId(CHAT_IDENTIFIER_MESSAGE_ID)
+
+method getMessages*(self: Module): seq[message_item.Item] =
+  return self.view.model().items

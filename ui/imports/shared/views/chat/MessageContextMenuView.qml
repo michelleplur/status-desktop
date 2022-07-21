@@ -13,10 +13,10 @@ import shared.panels 1.0
 import shared.popups 1.0
 import shared.status 1.0
 import shared.controls.chat 1.0
+import shared.controls.chat.menuItems 1.0
 
 StatusPopupMenu {
     id: root
-    width: emojiContainer.visible ? emojiContainer.width : 176
 
     property var store
     property var reactionModel
@@ -25,9 +25,6 @@ StatusPopupMenu {
     property string myPublicKey: ""
     property bool amIChatAdmin: false
     property bool pinMessageAllowedForMembers: false
-    property bool isMyMessage: {
-        return root.messageSenderId !== "" && root.messageSenderId == root.myPublicKey
-    }
 
     property int chatType: Constants.chatType.publicChat
     property string messageId: ""
@@ -48,12 +45,28 @@ StatusPopupMenu {
     property bool pinnedMessage: false
     property bool canPin: false
 
+    readonly property bool isMyMessage: {
+        return root.messageSenderId !== "" && root.messageSenderId == root.myPublicKey;
+    }
+    readonly property bool isMe: {
+        return root.selectedUserPublicKey == root.store.contactsStore.myPublicKey;
+    }
+    readonly property bool isMyMutualContact: {
+        return root.selectedUserPublicKey !== "" && root.store.contactsStore.isMyMutualContact(root.selectedUserPublicKey);
+    }
+    readonly property bool isBlockedContact: {
+        return root.selectedUserPublicKey !== "" && root.store.contactsStore.isBlockedContact(root.selectedUserPublicKey);
+    }
+    readonly property bool hasPendingContactRequest: {
+        return root.selectedUserPublicKey !== "" && root.store.contactsStore.hasPendingContactRequest(root.selectedUserPublicKey);
+    }
+
     property var setXPosition: function() {return 0}
     property var setYPosition: function() {return 0}
 
     property var emojiReactionsReactedByUser: []
 
-    signal openProfileClicked(string publicKey)
+    signal openProfileClicked(string publicKey, string state)
     signal pinMessage(string messageId)
     signal unpinMessage(string messageId)
     signal pinnedMessagesLimitReached(string messageId)
@@ -64,14 +77,6 @@ StatusPopupMenu {
     signal toggleReaction(string messageId, int emojiId)
     signal deleteMessage(string messageId)
     signal editClicked(string messageId)
-
-    onHeightChanged: {
-        root.y = setYPosition()
-    }
-
-    onWidthChanged: {
-        root.x = setXPosition()
-    }
 
     function show(userNameParam, fromAuthorParam, identiconParam, textParam, nicknameParam, emojiReactionsModel) {
         let newEmojiReactions = []
@@ -89,6 +94,21 @@ StatusPopupMenu {
         */
         popup()
     }
+
+    onClosed: {
+        // Reset selectedUserPublicKey so that associated properties get recalculated on re-open
+        selectedUserPublicKey = ""
+    }
+
+    onHeightChanged: { root.y = setYPosition(); }
+    onWidthChanged: { root.x = setXPosition(); }
+    onOpened: {
+        // Trigger x and y position:
+        x = setXPosition()
+        y = setYPosition()
+    }
+
+    width: Math.max(emojiContainer.visible ? emojiContainer.width : 0, 200)
 
     Item {
         id: emojiContainer
@@ -160,36 +180,73 @@ StatusPopupMenu {
         enabled: root.isRightClickOnImage && !root.pinnedPopup
     }
 
-    StatusMenuItem {
+    ViewProfileMenuItem {
         id: viewProfileAction
-        //% "View Profile"
-        text: qsTrId("view-profile")
+        enabled: root.isProfile && !root.pinnedPopup
         onTriggered: {
-            root.openProfileClicked(root.selectedUserPublicKey)
+            root.openProfileClicked(root.selectedUserPublicKey, "")
             root.close()
         }
-        icon.name: "profile"
-        enabled: root.isProfile && !root.pinnedPopup
+    }
+
+    SendMessageMenuItem {
+        id: sendMessageMenuItem
+        enabled: root.isProfile && root.isMyMutualContact && !root.isBlockedContact
+        onTriggered: {
+            root.createOneToOneChat("", root.selectedUserPublicKey, "")
+            root.close()
+        }
+    }
+
+    SendContactRequestMenuItem {
+        enabled: root.isProfile && !root.isMe && !root.isMyMutualContact
+                                && !root.isBlockedContact && !root.hasPendingContactRequest
+        onTriggered: {
+            root.openProfileClicked(root.selectedUserPublicKey, "contactRequest")
+            root.close()
+        }
     }
 
     StatusMenuItem {
-        id: sendMessageOrReplyTo
-        text: root.isProfile ?
-                  //% "Send message"
-                  qsTrId("send-message") :
-                  //% "Reply to"
-                  qsTrId("reply-to")
+        text: qsTr("Block User")
+        icon.name: "cancel"
+        icon.color: Style.current.danger
+        enabled: root.isProfile && !root.isMe && !root.isBlockedContact
         onTriggered: {
-            if (root.isProfile) {
-                root.createOneToOneChat("", root.selectedUserPublicKey, "")
-            } else {
-                root.showReplyArea()
-            }
+            root.openProfileClicked(root.selectedUserPublicKey, "blockUser")
             root.close()
         }
+    }
+
+    StatusMenuItem {
+        text: qsTr("Unblock User")
+        icon.name: "remove"
+        enabled: root.isProfile && !root.isMe && root.isBlockedContact
+        onTriggered: {
+            root.openProfileClicked(root.selectedUserPublicKey, "unblockUser")
+            root.close()
+        }
+    }
+
+    StatusMenuItem {
+        text: qsTr("Rename")
+        icon.name: "edit_pencil"
+        enabled: root.isProfile && !root.isMe
+        onTriggered: {
+            root.openProfileClicked(root.selectedUserPublicKey, "openNickname")
+            root.close()
+        }
+    }
+
+    StatusMenuItem {
+        id: replyToMenuItem
+        text: qsTr("Reply to")
         icon.name: "chat"
-        enabled: root.isProfile && root.store.contactsStore.isMyMutualContact(root.selectedUserPublicKey) ||
-                 (!root.hideEmojiPicker &&
+        onTriggered: {
+            root.showReplyArea()
+            root.close()
+        }
+        enabled: (!root.hideEmojiPicker &&
                   !root.isEmoji &&
                   !root.isProfile &&
                   !root.pinnedPopup &&
@@ -198,8 +255,7 @@ StatusPopupMenu {
 
     StatusMenuItem {
         id: editMessageAction
-        //% "Edit message"
-        text: qsTrId("edit-message")
+        text: qsTr("Edit message")
         onTriggered: {
             editClicked(messageId)
         }
@@ -228,11 +284,9 @@ StatusPopupMenu {
         id: pinAction
         text: {
             if (root.pinnedMessage) {
-                //% "Unpin"
-                return qsTrId("unpin")
+                return qsTr("Unpin")
             }
-            //% "Pin"
-            return qsTrId("pin")
+            return qsTr("Pin")
 
         }
         onTriggered: {
@@ -274,7 +328,8 @@ StatusPopupMenu {
     StatusMenuSeparator {
         visible: deleteMessageAction.enabled &&
                  (viewProfileAction.enabled ||
-                  sendMessageOrReplyTo.enabled ||
+                  sendMessageMenuItem.enabled ||
+                  replyToMenuItem.enabled ||
                   editMessageAction.enabled ||
                   pinAction.enabled)
     }
@@ -291,8 +346,7 @@ StatusPopupMenu {
                   root.messageContentType === Constants.messageContentType.emojiType ||
                   root.messageContentType === Constants.messageContentType.imageType ||
                   root.messageContentType === Constants.messageContentType.audioType)
-        //% "Delete message"
-        text: qsTrId("delete-message")
+        text: qsTr("Delete message")
         onTriggered: {
             if (!localAccountSensitiveSettings.showDeleteMessageWarning) {
                 deleteMessage(messageId)
@@ -314,7 +368,7 @@ StatusPopupMenu {
             root.close()
             root.shouldCloseParentPopup()
         }
-        icon.name: "up"
+        icon.name: "arrow-up"
     }
 
     FileDialog {
@@ -336,10 +390,8 @@ StatusPopupMenu {
     Component {
         id: deleteMessageConfirmationDialogComponent
         ConfirmationDialog {
-            //% "Confirm deleting this message"
-            header.title: qsTrId("confirm-deleting-this-message")
-            //% "Are you sure you want to delete this message? Be aware that other clients are not guaranteed to delete the message as well."
-            confirmationText: qsTrId("are-you-sure-you-want-to-delete-this-message--be-aware-that-other-clients-are-not-guaranteed-to-delete-the-message-as-well-")
+            header.title: qsTr("Confirm deleting this message")
+            confirmationText: qsTr("Are you sure you want to delete this message? Be aware that other clients are not guaranteed to delete the message as well.")
             height: 260
             checkbox.visible: true
             executeConfirm: function () {

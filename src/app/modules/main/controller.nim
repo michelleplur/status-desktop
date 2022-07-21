@@ -2,9 +2,10 @@ import ../shared_models/section_item, io_interface, chronicles
 import ../../global/app_sections_config as conf
 import ../../global/global_singleton
 import ../../global/app_signals
-import ../../core/signals/types
+import ../../core/signals/types as signal_types
 import ../../core/eventemitter
 import ../../core/notifications/notifications_manager
+import ../../../app_service/common/types
 import ../../../app_service/service/settings/service as settings_service
 import ../../../app_service/service/keychain/service as keychain_service
 import ../../../app_service/service/accounts/service as accounts_service
@@ -169,9 +170,25 @@ proc init*(self: Controller) =
     var args = ContactArgs(e)
     self.delegate.contactUpdated(args.contactId)
 
+  self.events.on(SIGNAL_CONTACTS_STATUS_UPDATED) do(e: Args):
+    let args = ContactsStatusUpdatedArgs(e)
+    self.delegate.contactsStatusUpdated(args.statusUpdates)
+
   self.events.on(SIGNAL_CONTACT_NICKNAME_CHANGED) do(e: Args):
     var args = ContactArgs(e)
     self.delegate.contactUpdated(args.contactId)
+
+  self.events.on(SIGNAL_CONTACT_UNTRUSTWORTHY) do(e: Args):
+    var args = TrustArgs(e)
+    self.delegate.contactUpdated(args.publicKey)
+
+  self.events.on(SIGNAL_CONTACT_TRUSTED) do(e: Args):
+    var args = TrustArgs(e)
+    self.delegate.contactUpdated(args.publicKey)
+
+  self.events.on(SIGNAL_REMOVED_TRUST_STATUS) do(e: Args):
+    var args = TrustArgs(e)
+    self.delegate.contactUpdated(args.publicKey)
 
   self.events.on(SIGNAL_MNEMONIC_REMOVAL) do(e: Args):
     self.delegate.mnemonicBackedUp()
@@ -202,6 +219,14 @@ proc init*(self: Controller) =
 
   self.events.on(SIGNAL_NETWORK_DISCONNECTED) do(e: Args):
     self.delegate.onNetworkDisconnected()
+
+  self.events.on(SIGNAL_CURRENT_USER_STATUS_UPDATED) do (e: Args):
+    var args = CurrentUserStatusArgs(e)
+    singletonInstance.userProfile.setCurrentUserStatus(args.statusType.int)
+
+  self.events.on(chat_service.SIGNAL_CHAT_LEFT) do(e: Args):
+    let args = chat_service.ChatArgs(e)
+    self.delegate.onChatLeft(args.chatId)
 
 proc isConnected*(self: Controller): bool =
   return self.nodeService.isConnected()
@@ -265,9 +290,10 @@ proc getNumOfNotificationsForCommunity*(self: Controller, communityId: string): 
     result.unviewed += chat.unviewedMessagesCount
     result.mentions += chat.unviewedMentionsCount
 
-proc setUserStatus*(self: Controller, status: bool) =
+proc setCurrentUserStatus*(self: Controller, status: StatusType) =
   if(self.settingsService.saveSendStatusUpdates(status)):
-    singletonInstance.userProfile.setUserStatus(status)
+    singletonInstance.userProfile.setCurrentUserStatus(status.int)
+    self.contactsService.emitCurrentUserStatusChanged(self.settingsService.getCurrentUserStatus())
   else:
     error "error updating user status"
 
@@ -278,7 +304,7 @@ proc getContacts*(self: Controller, group: ContactsGroup): seq[ContactsDto] =
   return self.contactsService.getContactsByGroup(group)
 
 proc getContactNameAndImage*(self: Controller, contactId: string):
-  tuple[name: string, image: string] =
+    tuple[name: string, image: string, largeImage: string] =
   return self.contactsService.getContactNameAndImage(contactId)
 
 proc getContactDetails*(self: Controller, contactId: string): ContactDetails =
@@ -296,3 +322,6 @@ proc switchTo*(self: Controller, sectionId, chatId, messageId: string) =
 
 proc getCommunityById*(self: Controller, communityId: string): CommunityDto =
   return self.communityService.getCommunityById(communityId)
+
+proc getStatusForContactWithId*(self: Controller, publicKey: string): StatusUpdateDto =
+  return self.contactsService.getStatusForContactWithId(publicKey)

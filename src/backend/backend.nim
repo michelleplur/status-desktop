@@ -16,6 +16,9 @@ type
   Bookmark* = ref object of RootObj
     name* {.serializedFieldName("name").}: string
     url* {.serializedFieldName("url").}: string
+    imageUrl* {.serializedFieldName("imageUrl").}: string
+    removed* {.serializedFieldName("removed").}: bool
+    deletedAt* {.serializedFieldName("deletedAt").}: int
 
   Permission* = ref object of RootObj
     dapp* {.serializedFieldName("dapp").}: string
@@ -38,7 +41,8 @@ type
     nativeCurrencySymbol* {.serializedFieldName("nativeCurrencySymbol").}: string
     isTest* {.serializedFieldName("isTest").}: bool
     enabled* {.serializedFieldName("enabled").}: bool
-
+    chainColor* {.serializedFieldName("chainColor").}: string
+    shortName* {.serializedFieldName("shortName").}: string
 
 rpc(clientVersion, "web3"):
   discard
@@ -93,12 +97,16 @@ rpc(discoverToken, "wallet"):
   chainId: int
   address: string
 
-rpc(getPendingTransactions, "wallet"):
-  discard
+rpc(getPendingTransactionsByChainIDs, "wallet"):
+  chainIds: seq[int]
 
 rpc(toggleVisibleToken, "wallet"):
   chainId: int
   address: string
+
+rpc(getTransactionEstimatedTime, "wallet"):
+  chainId: int
+  maxFeePerGas: float
 
 rpc(fetchPrices, "wallet"):
   symbols: seq[string]

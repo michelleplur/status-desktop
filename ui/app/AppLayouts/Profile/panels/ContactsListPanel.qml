@@ -16,14 +16,18 @@ Item {
 
     property var contactsModel
     property int panelUsage: Constants.contactsPanelUsage.unknownPosition
+    property int contactsListHeight: ((contactsList.count * contactsList.itemAtIndex(0).implicitHeight)+title.height)
+    property bool scrollbarOn: false
 
     property string title: ""
     property string searchString: ""
     property string lowerCaseSearchString: searchString.toLowerCase()
+    readonly property int count: contactsList.count
 
     signal contactClicked(string publicKey)
     signal openProfilePopup(string publicKey)
     signal sendMessageActionTriggered(string publicKey)
+    signal showVerificationRequest(string publicKey)
     signal openChangeNicknamePopup(string publicKey)
     signal contactRequestAccepted(string publicKey)
     signal contactRequestRejected(string publicKey)
@@ -34,7 +38,6 @@ Item {
 
     StyledText {
         id: title
-        anchors.top: parent.top
         anchors.left: parent.left
         anchors.leftMargin: Style.current.padding
         visible: contactListRoot.title !== ""
@@ -92,7 +95,11 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-
+        interactive: false
+        clip: true
+        ScrollBar.vertical: ScrollBar {
+            policy: contactListRoot.scrollbarOn ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
+        }
         model: delegateModel
     }
 
@@ -101,26 +108,28 @@ Item {
 
         ContactPanel {
             id: panelDelegate
+            width: (parent.width-10)
             name: model.displayName
             publicKey: model.pubKey
             icon: model.icon
-            isMutualContact: model.isContact
+            isContact: model.isContact
             isBlocked: model.isBlocked
             isVerified: model.isVerified
             isUntrustworthy: model.isUntrustworthy
+            verificationRequestStatus: model.incomingVerificationStatus
 
             searchStr: contactListRoot.searchString
 
             showSendMessageButton: model.isContact
             showRejectContactRequestButton: {
-                if (contactListRoot.panelUsage === Constants.contactsPanelUsage.receivedContactRequest) {
+                if (contactListRoot.panelUsage === Constants.contactsPanelUsage.receivedContactRequest && !model.verificationRequestStatus) {
                     return true
                 }
 
                 return false
             }
             showAcceptContactRequestButton: {
-                if (contactListRoot.panelUsage === Constants.contactsPanelUsage.receivedContactRequest) {
+                if (contactListRoot.panelUsage === Constants.contactsPanelUsage.receivedContactRequest && !model.verificationRequestStatus) {
                     return true
                 }
 
@@ -155,6 +164,7 @@ Item {
             onContactRequestRejected: contactListRoot.contactRequestRejected(publicKey)
             onRejectionRemoved: contactListRoot.rejectionRemoved(publicKey)
             onTextClicked: contactListRoot.textClicked(publicKey)
+            onShowVerificationRequest: contactListRoot.showVerificationRequest(publicKey)
 
             visible: searchString === "" ||
                      panelDelegate.name.toLowerCase().includes(lowerCaseSearchString) ||

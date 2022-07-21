@@ -154,6 +154,12 @@ QtObject:
   proc unmuteChat*(self: View, chatId: string) {.slot.} =
     self.delegate.unmuteChat(chatId)
 
+  proc muteCategory*(self: View, categoryId: string) {.slot.} =
+    self.delegate.muteCategory(categoryId)
+
+  proc unmuteCategory*(self: View, categoryId: string) {.slot.} =
+    self.delegate.unmuteCategory(categoryId)
+
   proc markAllMessagesRead*(self: View, chatId: string) {.slot.} =
     self.delegate.markAllMessagesRead(chatId)
 
@@ -169,11 +175,11 @@ QtObject:
   proc acceptAllContactRequests*(self: View) {.slot.} =
     self.delegate.acceptAllContactRequests()
 
-  proc rejectContactRequest*(self: View, publicKey: string) {.slot.} =
-    self.delegate.rejectContactRequest(publicKey)
+  proc dismissContactRequest*(self: View, publicKey: string) {.slot.} =
+    self.delegate.dismissContactRequest(publicKey)
 
-  proc rejectAllContactRequests*(self: View) {.slot.} =
-    self.delegate.rejectAllContactRequests()
+  proc dismissAllContactRequests*(self: View) {.slot.} =
+    self.delegate.dismissAllContactRequests()
 
   proc blockContact*(self: View, publicKey: string) {.slot.} =
     self.delegate.blockContact(publicKey)
@@ -247,8 +253,11 @@ QtObject:
   proc banUserFromCommunity*(self: View, pubKey: string) {.slot.} =
     self.delegate.banUserFromCommunity(pubKey)
 
-  proc editCommunity*(self: View, name: string, description: string, introMessage: string, outroMessage: string, access: int, color: string, logoJsonData: string, bannerJsonData: string, historyArchiveSupportEnabled: bool, pinMessageAllMembersEnabled: bool) {.slot.} =
-    self.delegate.editCommunity(name, description, introMessage, outroMessage, access, color, logoJsonData, bannerJsonData, historyArchiveSupportEnabled, pinMessageAllMembersEnabled)
+  proc editCommunity*(self: View, name: string, description: string, introMessage: string, outroMessage: string, access: int,
+                      color: string, tags: string, logoJsonData: string, bannerJsonData: string, historyArchiveSupportEnabled: bool, 
+                      pinMessageAllMembersEnabled: bool) {.slot.} =
+    self.delegate.editCommunity(name, description, introMessage, outroMessage, access, color, tags,
+                                logoJsonData, bannerJsonData, historyArchiveSupportEnabled, pinMessageAllMembersEnabled)
 
   proc exportCommunity*(self: View): string {.slot.} =
     self.delegate.exportCommunity()
@@ -293,3 +302,6 @@ QtObject:
       return
     self.loadingHistoryMessagesInProgress = value
     self.loadingHistoryMessagesInProgressChanged()
+
+  proc downloadMessages*(self: View, chatId: string, filePath: string) {.slot.} =
+    self.delegate.downloadMessages(chatId, filePath)

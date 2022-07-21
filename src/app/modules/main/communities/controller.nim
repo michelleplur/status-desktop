@@ -62,6 +62,9 @@ proc init*(self: Controller) =
     let args = CommunityMutedArgs(e)
     self.delegate.communityMuted(args.communityId, args.muted)
 
+proc getCommunityTags*(self: Controller): string =
+  result = self.communityService.getCommunityTags()
+
 proc getAllCommunities*(self: Controller): seq[CommunityDto] =
   result = self.communityService.getAllCommunities()
 
@@ -82,6 +85,7 @@ proc createCommunity*(
     outroMessage: string,
     access: int,
     color: string,
+    tags: string,
     imageUrl: string,
     aX: int, aY: int, bX: int, bY: int,
     historyArchiveSupportEnabled: bool,
@@ -93,6 +97,7 @@ proc createCommunity*(
     outroMessage,
     access,
     color,
+    tags,
     imageUrl,
     aX, aY, bX, bY,
     historyArchiveSupportEnabled,
@@ -132,7 +137,7 @@ proc setCommunityMuted*(self: Controller, communityId: string, muted: bool) =
   self.communityService.setCommunityMuted(communityId, muted)
 
 proc getContactNameAndImage*(self: Controller, contactId: string):
-    tuple[name: string, image: string] =
+    tuple[name: string, image: string, largeImage: string] =
   return self.contactsService.getContactNameAndImage(contactId)
 
 proc getContactDetails*(self: Controller, contactId: string): ContactDetails =
@@ -146,3 +151,6 @@ proc userCanJoin*(self: Controller, communityId: string): bool =
 
 proc isCommunityRequestPending*(self: Controller, communityId: string): bool =
   return self.communityService.isCommunityRequestPending(communityId)
+
+proc getStatusForContactWithId*(self: Controller, publicKey: string): StatusUpdateDto =
+  return self.contactsService.getStatusForContactWithId(publicKey)

@@ -32,10 +32,8 @@ Item {
 
     property var rootStore
     property var contactsStore
-    property var chatSectionModule
     property var emojiPopup
 
-    property Component pinnedMessagesPopupComponent
     // Not Refactored Yet
     //property int chatGroupsListViewCount: 0
     property bool isReply: false
@@ -46,6 +44,7 @@ Item {
     property bool isSectionActive: mainModule.activeSection.id === parentModule.getMySectionId()
     property string activeChatId: parentModule && parentModule.activeItem.id
     property string activeSubItemId: parentModule && parentModule.activeItem.activeSubItem.id
+    property int chatsCount: parentModule && parentModule.model ? parentModule.model.count : 0
     property string activeChatType: parentModule && parentModule.activeItem.type
     property string currentNotificationChatId
     property string currentNotificationCommunityId
@@ -55,8 +54,9 @@ Item {
     property Timer timer: Timer { }
     property var userList
     property var contactDetails: Utils.getContactDetailsAsJson(root.activeChatId)
-    property bool isContact: root.contactDetails.isContact
+    property bool isUserAdded: root.contactDetails.isAdded
     property bool contactRequestReceived: root.contactDetails.requestReceived
+    property Component pinnedMessagesListPopupComponent
 
     signal openAppSearch()
     signal openStickerPackPopup(string stickerPackId)
@@ -161,15 +161,9 @@ Item {
 
     EmptyChatPanel {
         anchors.fill: parent
-        visible: root.activeChatId === ""
+        visible: root.activeChatId === "" || root.chatsCount == 0
         rootStore: root.rootStore
         onShareChatKeyClicked: Global.openProfilePopup(userProfile.pubKey);
-    }
-
-    CreateChatView {
-        rootStore: root.rootStore
-        emojiPopup: root.emojiPopup
-        visible: mainModule.activeSection.sectionType === Constants.appSection.chat && root.rootStore.openCreateChat
     }
 
     // This is kind of a solution for applying backend refactored changes with the minimal qml changes.
@@ -230,18 +224,29 @@ Item {
                             rootStore: root.rootStore
                             contactsStore: root.contactsStore
                             emojiPopup: root.emojiPopup
+                            isConnected: root.isConnected
                             sendTransactionNoEnsModal: cmpSendTransactionNoEns
                             receiveTransactionModal: cmpReceiveTransaction
                             sendTransactionWithEnsModal: cmpSendTransactionWithEns
                             stickersLoaded: root.stickersLoaded
                             isBlocked: model.blocked
                             isActiveChannel: categoryChatLoader.isActiveChannel
+                            activityCenterVisible: activityCenter.visible
+                            activityCenterNotificationsCount: activityCenter.unreadNotificationsCount
+                            pinnedMessagesPopupComponent: root.pinnedMessagesListPopupComponent
                             onOpenStickerPackPopup: {
                                 root.openStickerPackPopup(stickerPackId)
+                            }
+                            onNotificationButtonClicked: {
+                                activityCenter.open();
+                            }
+                            onOpenAppSearch: {
+                                root.openAppSearch();
                             }
                             Component.onCompleted: {
                                 parentModule.prepareChatContentModuleForChatId(model.itemId)
                                 chatContentModule = parentModule.getChatContentModule()
+                                chatSectionModule = root.chatSectionModule;
                             }
                         }
                     }
@@ -275,6 +280,7 @@ Item {
                         clip: true
                         rootStore: root.rootStore
                         contactsStore: root.contactsStore
+                        isConnected: root.isConnected
                         emojiPopup: root.emojiPopup
                         sendTransactionNoEnsModal: cmpSendTransactionNoEns
                         receiveTransactionModal: cmpReceiveTransaction
@@ -282,13 +288,22 @@ Item {
                         stickersLoaded: root.stickersLoaded
                         isBlocked: model.blocked
                         isActiveChannel: chatLoader.isActiveChannel
+                        activityCenterVisible: activityCenter.visible
+                        activityCenterNotificationsCount: activityCenter.unreadNotificationsCount
+                        pinnedMessagesPopupComponent: root.pinnedMessagesListPopupComponent
                         onOpenStickerPackPopup: {
                             root.openStickerPackPopup(stickerPackId)
+                        }
+                        onNotificationButtonClicked: {
+                            activityCenter.open();
+                        }
+                        onOpenAppSearch: {
+                            root.openAppSearch();
                         }
                         Component.onCompleted: {
                             parentModule.prepareChatContentModuleForChatId(model.itemId)
                             chatContentModule = parentModule.getChatContentModule()
-
+                            chatSectionModule = root.chatSectionModule;
                             root.checkForCreateChatOptions(model.itemId)
                         }
                     }
@@ -301,8 +316,8 @@ Item {
         Layout.alignment: Qt.AlignHCenter | Qt.AlignBottom
         Layout.fillWidth: true
         Layout.bottomMargin: Style.current.bigPadding
-        isContact: root.isContact
-        visible: root.activeChatType === Constants.chatType.oneToOne && (!root.isContact /*|| !contactRequestReceived*/)
+        isUserAdded: root.isUserAdded
+        visible: root.activeChatType === Constants.chatType.oneToOne && !root.isUserAdded
         onAddContactClicked: {
             root.rootStore.addContact(root.activeChatId);
         }
@@ -314,17 +329,14 @@ Item {
             id: sendTransactionNoEns
             store: root.rootStore
             contactsStore: root.contactsStore
-            isContact: root.isContact
             onClosed: {
                 destroy()
             }
             sendChatCommand: root.requestAddressForTransaction
             isRequested: false
-            //% "Send"
-            commandTitle: qsTrId("command-button-send")
+            commandTitle: qsTr("Send")
             header.title: commandTitle
-            //% "Request Address"
-            finalButtonLabel: qsTrId("request-address")
+            finalButtonLabel: qsTr("Request Address")
             selectRecipient.selectedRecipient: {
                 parentModule.prepareChatContentModuleForChatId(activeChatId)
                 let chatContentModule = parentModule.getChatContentModule()
@@ -349,17 +361,14 @@ Item {
             id: receiveTransaction
             store: root.rootStore
             contactsStore: root.contactsStore
-            isContact: root.isContact
             onClosed: {
                 destroy()
             }
             sendChatCommand: root.requestTransaction
             isRequested: true
-            //% "Request"
-            commandTitle: qsTrId("wallet-request")
+            commandTitle: qsTr("Request")
             header.title: commandTitle
-            //% "Request"
-            finalButtonLabel: qsTrId("wallet-request")
+            finalButtonLabel: qsTr("Request")
             selectRecipient.selectedRecipient: {
                 parentModule.prepareChatContentModuleForChatId(activeChatId)
                 let chatContentModule = parentModule.getChatContentModule()
@@ -409,7 +418,7 @@ Item {
         height: root.height - 56 * 2 // TODO get screen size // Taken from old code top bar height was fixed there to 56
         y: 56
         store: root.rootStore
-        chatSectionModule: root.chatSectionModule
+        chatSectionModule: root.parentModule
         messageContextMenu: contextmenu
     }
 
@@ -427,11 +436,9 @@ Item {
 //            }
 //            onTransactionCompleted: {
 //                toastMessage.title = !success ?
-//                                     //% "Could not buy Stickerpack"
-//                                     qsTrId("could-not-buy-stickerpack")
+//                                     qsTr("Could not buy Stickerpack")
 //                                     :
-//                                     //% "Stickerpack bought successfully"
-//                                     qsTrId("stickerpack-bought-successfully");
+//                                     qsTr("Stickerpack bought successfully");
 //                if (success) {
 //                    toastMessage.source = Style.svg("check-circle")
 //                    toastMessage.iconColor = Style.current.success

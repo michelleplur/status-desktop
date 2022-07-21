@@ -11,7 +11,7 @@ Column {
     spacing: 4
 
     property var privacyStore
-    property var messagingStore
+    property var contactsStore
     property alias mainMenuItems: mainMenuItems.model
     property alias settingsMenuItems: settingsMenuItems.model
     property alias extraMenuItems: extraMenuItems.model
@@ -19,8 +19,6 @@ Column {
 
     property bool browserMenuItemEnabled: false
     property bool walletMenuItemEnabled: false
-    property bool appsMenuItemsEnabled: false
-    property bool communitiesMenuItemEnabled: false
 
     signal menuItemClicked(var menu_item)
 
@@ -59,21 +57,22 @@ Column {
         id: appsMenuItems
         delegate: StatusNavigationListItem {
             id: appsMenuDelegate
+            objectName:  model.text + "-AppMenu"
             itemId: model.subsection
             title: model.text
             icon.name: model.icon
             selected: Global.settingsSubsection === model.subsection
             onClicked: root.menuItemClicked(model)
             visible: {
-                (model.subsection !== Constants.settingsSubsection.browserSettings && model.subsection !== Constants.settingsSubsection.wallet && model.subsection !== Constants.settingsSubsection.communitiesSettings) ||
+                (model.subsection !== Constants.settingsSubsection.browserSettings && model.subsection !== Constants.settingsSubsection.wallet) ||
                 (model.subsection === Constants.settingsSubsection.browserSettings && root.browserMenuItemEnabled) ||        
-                (model.subsection === Constants.settingsSubsection.communitiesSettings && root.communitiesMenuItemEnabled) ||
-                (model.subsection === Constants.settingsSubsection.wallet && root.appsMenuItemsEnabled)
+                (model.subsection === Constants.settingsSubsection.communitiesSettings) ||
+                (model.subsection === Constants.settingsSubsection.wallet && root.walletMenuItemEnabled)
             }
             badge.value: {
                 switch (model.subsection) {
                     case Constants.settingsSubsection.messaging:
-                        return root.messagingStore.contactRequestsModel.count
+                        return root.contactsStore.receivedContactRequestsModel.count
                     default: return ""
                 }
             }
@@ -86,6 +85,7 @@ Column {
         id: settingsMenuItems
         delegate: StatusNavigationListItem {
             id: settingsMenuDelegate
+            objectName:  model.text + "-SettingsMenu"
             itemId: model.subsection
             title: model.text
             icon.name: model.icon

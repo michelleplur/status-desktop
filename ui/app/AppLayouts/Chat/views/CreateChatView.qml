@@ -14,7 +14,6 @@ import shared.status 1.0
 
 Page {
     id: root
-    anchors.fill: parent
     Behavior on anchors.bottomMargin { NumberAnimation { duration: 30 }}
 
     property ListModel contactsModel: ListModel { }
@@ -22,6 +21,7 @@ Page {
     property var emojiPopup: null
 
     Keys.onEscapePressed: {
+        Global.closeCreateChatView()
         root.rootStore.openCreateChat = false;
     }
 
@@ -37,21 +37,18 @@ Page {
         }
     }
 
-    Connections {
-        target: rootStore
-        onOpenCreateChatChanged: {
-            if (root.rootStore.openCreateChat) {
-                for (var i = 0; i < contactsModelListView.count; i ++) {
-                    var entry = contactsModelListView.itemAtIndex(i);
-                    contactsModel.insert(contactsModel.count,
-                    {"pubKey": entry.pubKey, "displayName": entry.displayName,
-                     "icon": entry.icon});
-                }
-                tagSelector.sortModel(root.contactsModel);
-            } else {
-                tagSelector.namesModel.clear();
-                contactsModel.clear();
+    onVisibleChanged: {
+        if (visible) {
+            for (var i = 0; i < contactsModelListView.count; i ++) {
+                var entry = contactsModelListView.itemAtIndex(i);
+                contactsModel.insert(contactsModel.count,
+                {"pubKey": entry.pubKey, "displayName": entry.displayName,
+                    "icon": entry.icon});
             }
+            tagSelector.sortModel(root.contactsModel);
+        } else {
+            contactsModel.clear();
+            tagSelector.namesModel.clear();
         }
     }
 
@@ -66,22 +63,15 @@ Page {
                 groupName += (tagSelector.namesModel.get(i).name + (i === tagSelector.namesModel.count - 1 ? "" : "&"));
                 pubKeys.push(tagSelector.namesModel.get(i).pubKey);
             }
-            root.rootStore.chatCommunitySectionModule.createGroupChat("",groupName, JSON.stringify(pubKeys));
+            root.rootStore.chatCommunitySectionModule.createGroupChat("", groupName, JSON.stringify(pubKeys));
         }
 
         chatInput.textInput.clear();
         chatInput.textInput.textFormat = TextEdit.PlainText;
         chatInput.textInput.textFormat = TextEdit.RichText;
+        Global.changeAppSectionBySectionType(Constants.appSection.chat)
     }
 
-    visible: (opacity > 0.01)
-    onVisibleChanged: {
-        if (!visible) {
-            tagSelector.namesModel.clear();
-        }
-    }
-
-    opacity: (root.rootStore.openCreateChat) ? 1.0 : 0.0
     Behavior on opacity { NumberAnimation {}}
     background: Rectangle {
         anchors.fill: parent
@@ -91,13 +81,11 @@ Page {
     // TODO: Could it be replaced to `GroupChatPanel`?
     header: RowLayout {
         id: headerRow
-        width: parent.width
-        height: tagSelector.height
         anchors.top: parent.top
-        anchors.topMargin: 8
-        anchors.right: parent.right
-        anchors.rightMargin: 8
+        anchors.topMargin: Style.current.halfPadding
+        height: tagSelector.height
         clip: true
+        spacing: Style.current.padding
         StatusTagSelector {
             id: tagSelector
             Layout.fillWidth: true
@@ -105,7 +93,8 @@ Page {
             Layout.leftMargin: 17
             maxHeight: root.height
             nameCountLimit: 20
-            listLabel: qsTr("Contacts")
+            listLabel: contactsModel.count ? qsTr("Contacts") : ""
+            textEdit.enabled: contactsModel.count
             toLabelText: qsTr("To: ")
             warningText: qsTr("USER LIMIT REACHED")
             ringSpecModelGetter: function(pubKey) {
@@ -124,22 +113,33 @@ Page {
 
         StatusButton {
             id: confirmButton
+            implicitWidth: 106
             implicitHeight: 44
             Layout.alignment: Qt.AlignTop
-            enabled: (tagSelector.namesModel.count > 0)
-            text: "Confirm"
+            enabled: tagSelector.namesModel.count > 0
+            text: qsTr("Confirm")
             onClicked: {
                 root.rootStore.createChatInitMessage = chatInput.textInput.text;
                 root.rootStore.createChatFileUrls = chatInput.fileUrls;
                 root.createChat();
             }
         }
+
+        Item {
+            implicitHeight: 32
+            implicitWidth: 32
+            Layout.alignment: Qt.AlignTop
+
+            StatusActivityCenterButton {
+                id: notificationButton
+                anchors.right: parent.right
+                unreadNotificationsCount: activityCenter.unreadNotificationsCount
+                onClicked: activityCenter.open()
+            }
+        }
     }
 
     contentItem: Item {
-        anchors.fill: parent
-        anchors.topMargin: headerRow.height + 32
-
         StatusChatInput {
             id: chatInput
             anchors.bottom: parent.bottom
@@ -177,18 +177,20 @@ Page {
         }
 
         StatusBaseText {
-            width: parent.width
-            height: contentHeight
-            anchors.centerIn: parent
+            anchors.left: parent.left
+            anchors.leftMargin: 252
+            anchors.right: parent.right
+            anchors.rightMargin: 252
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: -(headerRow.height/2)
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
-            visible: (contactsModel.count === 0)
+            visible: contactsModel.count === 0
             wrapMode: Text.WordWrap
             font.pixelSize: 15
             color: Theme.palette.baseColor1
-            text: qsTr("You can only send direct messages to your Contacts.\n\n
-Send a contact request to the person you would like to chat with, you will be able to
-chat with them once they have accepted your contact request.")
+            text: qsTr("You can only send direct messages to your Contacts.\n
+Send a contact request to the person you would like to chat with, you will be able to chat with them once they have accepted your contact request.")
             Component.onCompleted: {
                 if (visible) {
                     tagSelector.enabled = false;

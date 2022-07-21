@@ -102,11 +102,14 @@ method transactionWasSent*(self: Module, result: string) =
 method suggestedFees*(self: Module, chainId: int): string = 
   return self.controller.suggestedFees(chainId)
 
-method suggestedRoutes*(self: Module, account: string, amount: float64, token: string): string =
-  return self.controller.suggestedRoutes(account, amount, token)
+method suggestedRoutes*(self: Module, account: string, amount: float64, token: string, disabledChainIDs: seq[uint64]): string =
+  return self.controller.suggestedRoutes(account, amount, token, disabledChainIDs)
 
 method getChainIdForChat*(self: Module): int =
   return self.controller.getChainIdForChat()
 
 method getChainIdForBrowser*(self: Module): int =
   return self.controller.getChainIdForBrowser()
+
+method getEstimatedTime*(self: Module, chainId: int, maxFeePerGas: string): int = 
+  return self.controller.getEstimatedTime(chainId, maxFeePerGas).int

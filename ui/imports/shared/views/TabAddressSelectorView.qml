@@ -25,33 +25,26 @@ Item {
 
     signal contactSelected(string address, int type)
 
-    TabBar {
+    StatusTabBar {
         id: accountSelectionTabBar
         anchors.top: parent.top
         anchors.topMargin: 20
         width: parent.width
-        height: assetBtn.height
-        background: Rectangle {
-            color: Style.current.transparent
-        }
+        
         StatusTabButton {
             id: assetBtn
-            //% "Saved"
-            btnText: qsTr("Saved")
+            width: implicitWidth
+            text: qsTr("Saved")
         }
         StatusTabButton {
             id: collectiblesBtn
-            anchors.left: assetBtn.right
-            anchors.leftMargin: 32
-            //% "My Accounts"
-            btnText: qsTr("My Accounts")
+            width: implicitWidth
+            text: qsTr("My Accounts")
         }
         StatusTabButton {
             id: historyBtn
-            anchors.left: collectiblesBtn.right
-            anchors.leftMargin: 32
-            //% "Recent"
-            btnText: qsTr("Recent")
+            width: implicitWidth
+            text: qsTr("Recent")
         }
     }
 
@@ -115,7 +108,6 @@ Item {
                     StatusBaseText {
                         font.pixelSize: 15
                         color: Theme.palette.directColor1
-                        //% "No Saved Address"
                         text: qsTr("No Saved Address")
                     }
                 }
@@ -142,7 +134,7 @@ Item {
                     width: visible ? parent.width:  0
                     height: visible ? 64 : 0
                     title: model.name
-                    subTitle: Utils.toLocaleString(model.currencyBalance.toFixed(2), popup.store.locale, {"model.currency": true}) + " " + popup.store.currentCurrency.toUpperCase()
+                    subTitle: Utils.toLocaleString(model.currencyBalance.toFixed(2), store.locale, {"model.currency": true}) + " " + store.currentCurrency.toUpperCase()
                     icon.emoji: !!model.emoji ? model.emoji: ""
                     icon.color: model.color
                     icon.name: !model.emoji ? "filled-account": ""
@@ -176,13 +168,12 @@ Item {
                 header: StatusBaseText {
                     font.pixelSize: 15
                     color: Theme.palette.directColor1
-                    //% "No Recents"
                     text: qsTr("No Recents")
                     visible: recents.count <= 0
                 }
 
                 delegate: StatusListItem {
-                    property bool isIncoming: to === popup.store.currentAccount.address
+                    property bool isIncoming: to === store.currentAccount.address
                     width: visible ? parent.width:  0
                     height: visible ? 64 : 0
                     title: isIncoming ? from : to
@@ -196,14 +187,14 @@ Item {
                             height: 15
                             width: 15
                             color: isIncoming ? Style.current.success : Style.current.danger
-                            icon: isIncoming ? "down" : "up"
+                            icon: isIncoming ? "arrow-down" : "arrow-up"
                             rotation: 45
                         },
                         StatusBaseText {
                             id: contactsLabel
                             font.pixelSize: 15
                             color: Theme.palette.directColor1
-                            text: popup.store.hex2Eth(value)
+                            text: store.hex2Eth(value)
                         }
                     ]
                     onClicked: contactSelected(title, RecipientSelector.Type.Address)

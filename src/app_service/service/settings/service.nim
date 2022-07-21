@@ -1,36 +1,51 @@
 import NimQml, chronicles, json, strutils, sequtils, tables, sugar
 
 import ../../common/[network_constants]
+import ../../common/types as common_types
+import ../../../app/core/eventemitter
 import ../../../app/core/fleets/fleet_configuration
+import ../../../app/core/signals/types
 import ../../../backend/settings as status_settings
 import ../../../backend/status_update as status_update
 
 import ./dto/settings as settings_dto
-import ../contacts/dto/status_update as status_update_dto
 import ../stickers/dto/stickers as stickers_dto
-import ../../../app/core/fleets/fleet_configuration
 
 export settings_dto
 export stickers_dto
 
 # Default values:
-const DEFAULT_CURRENT_NETWORK* = "mainnet_rpc"
 const DEFAULT_CURRENCY* = "usd"
 const DEFAULT_TELEMETRY_SERVER_URL* = "https://telemetry.status.im"
 const DEFAULT_FLEET* = $Fleet.Prod
 
+const SIGNAL_CURRENT_USER_STATUS_UPDATED* = "currentUserStatusUpdated"
+const SIGNAL_SETTING_PROFILE_PICTURES_SHOW_TO_CHANGED* = "profilePicturesShowToChanged"
+const SIGNAL_SETTING_PROFILE_PICTURES_VISIBILITY_CHANGED* = "profilePicturesVisibilityChanged"
+
 logScope:
   topics = "settings-service"
 
+type
+  CurrentUserStatusArgs* = ref object of Args
+    statusType*: StatusType
+    text*: string
+
+type
+  SettingProfilePictureArgs* = ref object of Args
+    value*: int
+
 QtObject:
   type Service* = ref object of QObject
+    events: EventEmitter
     settings: SettingsDto
 
   proc delete*(self: Service) =
     self.QObject.delete
 
-  proc newService*(): Service =
+  proc newService*(events: EventEmitter): Service =
     new(result, delete)
+    result.events = events
     result.QObject.setup
 
   proc init*(self: Service) =
@@ -40,6 +55,24 @@ QtObject:
     except Exception as e:
       let errDesription = e.msg
       error "error: ", errDesription
+
+    self.events.on(SignalType.Message.event) do(e: Args):
+      var receivedData = MessageSignal(e)
+      
+      if receivedData.currentStatus.len > 0:
+        var statusUpdate = receivedData.currentStatus[0]
+        self.events.emit(SIGNAL_CURRENT_USER_STATUS_UPDATED, CurrentUserStatusArgs(statusType: statusUpdate.statusType, text: statusUpdate.text))
+
+      if receivedData.settings.len > 0:
+        for settingsField in receivedData.settings:
+
+          if settingsField.name == KEY_PROFILE_PICTURES_SHOW_TO:
+            self.settings.profilePicturesShowTo = settingsfield.value.parseInt
+            self.events.emit(SIGNAL_SETTING_PROFILE_PICTURES_SHOW_TO_CHANGED, SettingProfilePictureArgs(value: self.settings.profilePicturesShowTo))
+
+          if settingsField.name == KEY_PROFILE_PICTURES_VISIBILITY:
+            self.settings.profilePicturesVisibility = settingsfield.value.parseInt
+            self.events.emit(SIGNAL_SETTING_PROFILE_PICTURES_VISIBILITY_CHANGED, SettingProfilePictureArgs(value: self.settings.profilePicturesVisibility))
 
   proc saveSetting(self: Service, attribute: string, value: string | JsonNode | bool | int): bool =
     try:
@@ -73,18 +106,6 @@ QtObject:
       self.settings.currency = DEFAULT_CURRENCY
 
     return self.settings.currency
-
-  proc saveCurrentNetwork*(self: Service, value: string): bool =
-    if(self.saveSetting(KEY_NETWORKS_CURRENT_NETWORK, value)):
-      self.settings.currentNetwork = value
-      return true
-    return false
-
-  proc getCurrentNetwork*(self: Service): string =
-    if(self.settings.currentNetwork.len == 0):
-      self.settings.currentNetwork = DEFAULT_CURRENT_NETWORK
-
-    return self.settings.currentNetwork
 
   proc saveDappsAddress*(self: Service, value: string): bool =
     if(self.saveSetting(KEY_DAPPS_ADDRESS, value)):
@@ -309,15 +330,19 @@ QtObject:
   proc getTelemetryServerUrl*(self: Service): string =
     return self.settings.telemetryServerUrl
 
-  proc saveSendStatusUpdates*(self: Service, value: bool): bool =
-    var newStatus = StatusType.Online
-    if not value:
-      newStatus = StatusType.Offline
-
+  proc saveSendStatusUpdates*(self: Service, newStatus: StatusType): bool =
     try:
-      let r = status_update.setUserStatus(int(newStatus))
-      if(self.saveSetting(KEY_SEND_STATUS_UPDATES, value)):
-        self.settings.sendStatusUpdates = value
+      # The new user status needs to always be broadcast, so we need to update
+      # the settings accordingly and might turn it off afterwards (if user has
+      # set status to "inactive")
+      const propagateStatus = true
+      if(self.saveSetting(KEY_SEND_STATUS_UPDATES, propagateStatus) != true):
+          return false
+      discard status_update.setUserStatus(newStatus.int)
+      self.settings.currentUserStatus.statusType = newStatus
+      let sendPingsWithStatusUpdates = (newStatus == StatusType.AlwaysOnline or newStatus == StatusType.Automatic)
+      if(self.saveSetting(KEY_SEND_STATUS_UPDATES, sendPingsWithStatusUpdates)):
+        self.settings.sendStatusUpdates = sendPingsWithStatusUpdates
         return true
       return false
     except:
@@ -336,33 +361,6 @@ QtObject:
     let fleetAsString = self.getFleetAsString()
     let fleet = parseEnum[Fleet](fleetAsString)
     return fleet
-
-  proc getAvailableNetworks*(self: Service): seq[Network] =
-    return self.settings.availableNetworks
-
-  proc getAvailableCustomNetworks*(self: Service): seq[Network] =
-    return self.settings.availableNetworks.filterIt(it.id notin DEFAULT_NETWORKS_IDS)
-
-  proc getCurrentNetworkDetails*(self: Service): Network =
-    for n in self.settings.availableNetworks:
-      if(n.id == self.getCurrentNetwork()):
-        return n
-
-    # we should never be here
-    error "error: current network is not among available networks"
-
-  proc addCustomNetwork*(self: Service, network: Network): bool =
-    var newAvailableNetworks = self.settings.availableNetworks
-    newAvailableNetworks.add(network)
-    let availableNetworksAsJson = availableNetworksToJsonNode(newAvailableNetworks)
-
-    if(self.saveSetting(KEY_NETWORKS_ALL_NETWORKS, availableNetworksAsJson)):
-      self.settings.availableNetworks = newAvailableNetworks
-      return true
-    return false
-
-  proc getCurrentNetworkId*(self: Service): int =
-    self.getCurrentNetworkDetails().config.NetworkId
 
   proc getCurrentUserStatus*(self: Service): CurrentUserStatus =
     self.settings.currentUserStatus

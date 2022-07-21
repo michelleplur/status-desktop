@@ -91,6 +91,18 @@ proc init*(self: Controller) =
 
   # Events only for the user list, so not needed in public and one to one chats
   if(self.isUsersListAvailable):
+    self.events.on(SIGNAL_CONTACT_UNTRUSTWORTHY) do(e: Args):
+      var args = TrustArgs(e)
+      self.delegate.contactUpdated(args.publicKey)
+    
+    self.events.on(SIGNAL_CONTACT_TRUSTED) do(e: Args):
+      var args = TrustArgs(e)
+      self.delegate.contactUpdated(args.publicKey)
+        
+    self.events.on(SIGNAL_REMOVED_TRUST_STATUS) do(e: Args):
+      var args = TrustArgs(e)
+      self.delegate.contactUpdated(args.publicKey)
+
     self.events.on(SIGNAL_CONTACTS_STATUS_UPDATED) do(e: Args):
       let args = ContactsStatusUpdatedArgs(e)
       self.delegate.contactsStatusUpdated(args.statusUpdates)
@@ -113,7 +125,7 @@ proc init*(self: Controller) =
         self.delegate.onChatMembersAdded(args.ids)
 
     self.events.on(SIGNAL_CHAT_UPDATE) do(e: Args):
-      var args = ChatUpdateArgsNew(e)
+      var args = ChatUpdateArgs(e)
       for chat in args.chats:
         if (chat.id == self.chatId):
           self.delegate.onChatUpdated(chat)
@@ -161,7 +173,7 @@ proc getMembersPublicKeys*(self: Controller): seq[string] =
     return chatDto.members.map(x => x.id)
 
 proc getContactNameAndImage*(self: Controller, contactId: string):
-  tuple[name: string, image: string] =
+    tuple[name: string, image: string, largeImage: string] =
   return self.contactService.getContactNameAndImage(contactId)
 
 proc getContactDetails*(self: Controller, contactId: string): ContactDetails =

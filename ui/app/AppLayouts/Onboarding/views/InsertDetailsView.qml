@@ -55,9 +55,7 @@ Item {
 
     ColumnLayout {
         height: 461
-        anchors.top: parent.top
-        anchors.topMargin: 185
-        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.centerIn: parent
 
         StyledText {
             id: usernameText
@@ -151,7 +149,9 @@ Item {
                 onKeyPressed: {
                     if (input.edit.keyEvent === Qt.Key_Return || input.edit.keyEvent === Qt.Key_Enter) {
                         event.accepted = true
-                        nextBtn.clicked(null)
+                        if(nextBtn.enabled) {
+                            nextBtn.clicked(null)
+                        }
                     }
                 }
             }

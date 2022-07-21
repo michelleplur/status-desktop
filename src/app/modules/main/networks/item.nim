@@ -12,7 +12,11 @@ type
     nativeCurrencySymbol: string
     isTest: bool
     isEnabled: bool
-    
+    iconUrl: string
+    chainColor: string
+    shortName: string
+    balance: float64
+
 proc initItem*(
   chainId: int,
   nativeCurrencyDecimals: int,
@@ -24,6 +28,10 @@ proc initItem*(
   nativeCurrencySymbol: string,
   isTest: bool,
   isEnabled: bool,
+  iconUrl: string,
+  chainColor: string,
+  shortName: string,
+  balance: float64,
 ): Item =
   result.chainId = chainId
   result.nativeCurrencyDecimals = nativeCurrencyDecimals
@@ -35,6 +43,10 @@ proc initItem*(
   result.nativeCurrencySymbol = nativeCurrencySymbol
   result.isTest = isTest
   result.isEnabled = isEnabled
+  result.iconUrl = iconUrl
+  result.chainColor = chainColor
+  result.shortName = shortName
+  result.balance = balance
 
 proc `$`*(self: Item): string =
   result = fmt"""NetworkItem(
@@ -46,8 +58,12 @@ proc `$`*(self: Item): string =
     blockExplorerURL:{self.blockExplorerURL},
     nativeCurrencyName:{self.nativeCurrencyName},
     nativeCurrencySymbol:{self.nativeCurrencySymbol},
-    isTest:{self.isTest}
-    isEnabled:{self.isEnabled}
+    isTest:{self.isTest},
+    isEnabled:{self.isEnabled},
+    iconUrl:{self.iconUrl},
+    shortName: {self.shortName},
+    chainColor: {self.chainColor},
+    balance: {self.balance},
     ]"""
 
 proc getChainId*(self: Item): int =
@@ -78,4 +94,16 @@ proc getIsTest*(self: Item): bool =
   return self.isTest
 
 proc getIsEnabled*(self: Item): bool =
-  return self.isEnabled
+  return self.isEnabled  
+
+proc getIconURL*(self: Item): string =
+  return self.iconUrl
+
+proc getShortName*(self: Item): string =
+  return self.shortName
+
+proc getChainColor*(self: Item): string =
+  return self.chainColor
+
+proc getBalance*(self: Item): float64 =
+  return self.balance

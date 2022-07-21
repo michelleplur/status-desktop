@@ -20,8 +20,8 @@ Item {
 
     QtObject {
         id: d
-         property string formattedDate: nextMessageIndex > -1 ? Utils.formatLongDate(nextMsgTimestamp * 1, RootStore.accountSensitiveSettings.isDDMMYYDateFormat) :
-                                                                Utils.formatLongDate(undefined, RootStore.accountSensitiveSettings.isDDMMYYDateFormat)
+         readonly property string formattedDate: nextMessageIndex > -1 ? Utils.formatLongDate(nextMsgTimestamp * 1, RootStore.accountSensitiveSettings.isDDMMYYDateFormat) :
+                                                                         Utils.formatLongDate(undefined, RootStore.accountSensitiveSettings.isDDMMYYDateFormat)
     }
 
     Timer {
@@ -56,8 +56,7 @@ Item {
         font.weight: Font.Medium
         font.pixelSize: Style.current.primaryTextFontSize
         color: Style.current.blue
-        //% "↓ Fetch more messages"
-        text: qsTrId("load-more-messages")
+        text: qsTr("↓ Fetch more messages")
         horizontalAlignment: Text.AlignHCenter
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: sep1.bottom
@@ -81,7 +80,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         horizontalAlignment: Text.AlignHCenter
         color: Style.current.secondaryText
-        text: qsTr("before--%1").arg(d.formattedDate)
+        text: qsTr("Before %1").arg(d.formattedDate)
         visible: d.formattedDate
     }
 

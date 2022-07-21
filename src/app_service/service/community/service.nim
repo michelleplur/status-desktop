@@ -25,7 +25,7 @@ type
     community*: CommunityDto
     error*: string
     fromUserAction*: bool
-  
+
   CuratedCommunityArgs* = ref object of Args
     curatedCommunity*: CuratedCommunity
 
@@ -69,6 +69,10 @@ type
     communityId*: string
     muted*: bool
 
+  CategoryArgs* = ref object of Args
+    communityId*: string
+    categoryId*: string
+
 # Signals which may be emitted by this service:
 const SIGNAL_COMMUNITY_JOINED* = "communityJoined"
 const SIGNAL_COMMUNITY_MY_REQUEST_ADDED* = "communityMyRequestAdded"
@@ -93,6 +97,8 @@ const SIGNAL_COMMUNITY_MEMBER_REMOVED* = "communityMemberRemoved"
 const SIGNAL_NEW_REQUEST_TO_JOIN_COMMUNITY* = "newRequestToJoinCommunity"
 const SIGNAL_CURATED_COMMUNITY_FOUND* = "curatedCommunityFound"
 const SIGNAL_COMMUNITY_MUTED* = "communityMuted"
+const SIGNAL_CATEGORY_MUTED* = "categoryMuted"
+const SIGNAL_CATEGORY_UNMUTED* = "categoryUnmuted"
 
 QtObject:
   type
@@ -100,18 +106,21 @@ QtObject:
       threadpool: ThreadPool
       events: EventEmitter
       chatService: chat_service.Service
+      communityTags: string # JSON string contraining tags map
       joinedCommunities: Table[string, CommunityDto] # [community_id, CommunityDto]
       curatedCommunities: Table[string, CuratedCommunity] # [community_id, CuratedCommunity]
       allCommunities: Table[string, CommunityDto] # [community_id, CommunityDto]
       myCommunityRequests*: seq[CommunityMembershipRequestDto]
 
   # Forward declaration
+  proc loadCommunityTags(self: Service): string
   proc loadAllCommunities(self: Service): seq[CommunityDto]
   proc loadJoinedComunities(self: Service): seq[CommunityDto]
   proc loadCuratedCommunities(self: Service): seq[CuratedCommunity]
   proc loadCommunitiesSettings(self: Service): seq[CommunitySettingsDto]
   proc loadMyPendingRequestsToJoin*(self: Service)
   proc handleCommunityUpdates(self: Service, communities: seq[CommunityDto], updatedChats: seq[ChatDto])
+  proc handleCommunitiesSettingsUpdates(self: Service, communitiesSettings: seq[CommunitySettingsDto])
   proc pendingRequestsToJoinForCommunity*(self: Service, communityId: string): seq[CommunityMembershipRequestDto]
 
   proc delete*(self: Service) =
@@ -126,6 +135,7 @@ QtObject:
     result.events = events
     result.threadpool = threadpool
     result.chatService = chatService
+    result.communityTags = newString(0)
     result.joinedCommunities = initTable[string, CommunityDto]()
     result.curatedCommunities = initTable[string, CuratedCommunity]()
     result.allCommunities = initTable[string, CommunityDto]()
@@ -151,6 +161,9 @@ QtObject:
       if (receivedData.communities.len > 0):
         # Channel added removed is notified in the chats param
         self.handleCommunityUpdates(receivedData.communities, receivedData.chats)
+
+      if (receivedData.communitiesSettings.len > 0):
+        self.handleCommunitiesSettingsUpdates(receivedData.communitiesSettings)
 
       # Handling membership requests
       if(receivedData.membershipRequests.len > 0):
@@ -207,6 +220,14 @@ QtObject:
         let fullChatId = community.id & chat.id
         var chatDetails = self.chatService.getChatById(fullChatId)
         result.add(chatDetails)
+
+  proc handleCommunitiesSettingsUpdates(self: Service, communitiesSettings: seq[CommunitySettingsDto]) =
+    for settings in communitiesSettings:
+      if self.allCommunities.hasKey(settings.id):
+        self.allCommunities[settings.id].settings = settings
+      if self.joinedCommunities.hasKey(settings.id):
+        self.joinedCommunities[settings.id].settings = settings
+        self.events.emit(SIGNAL_COMMUNITY_EDITED, CommunityArgs(community: self.joinedCommunities[settings.id]))
 
   proc handleCommunityUpdates(self: Service, communities: seq[CommunityDto], updatedChats: seq[ChatDto]) =
     var community = communities[0]
@@ -315,51 +336,74 @@ QtObject:
 
   proc init*(self: Service) =
     self.doConnect()
+    self.communityTags = self.loadCommunityTags();
+    let joinedCommunities = self.loadJoinedComunities()
+    for community in joinedCommunities:
+      self.joinedCommunities[community.id] = community
+      if (community.admin):
+        self.joinedCommunities[community.id].pendingRequestsToJoin = self.pendingRequestsToJoinForCommunity(community.id)
 
+    let allCommunities = self.loadAllCommunities()
+    for community in allCommunities:
+      self.allCommunities[community.id] = community
+
+    let curatedCommunities = self.loadCuratedCommunities()
+    for curatedCommunity in curatedCommunities:
+      self.curatedCommunities[curatedCommunity.communityId] = curatedCommunity
+
+    let communitiesSettings = self.loadCommunitiesSettings()
+    for settings in communitiesSettings:
+      if self.allCommunities.hasKey(settings.id):
+        self.allCommunities[settings.id].settings = settings
+      if self.joinedCommunities.hasKey(settings.id):
+        self.joinedCommunities[settings.id].settings = settings
+
+    self.loadMyPendingRequestsToJoin()
+
+  proc loadCommunityTags(self: Service): string =
+    let response = status_go.getCommunityTags()
+    var result = newString(0)
+    toUgly(result, response.result)
+    return result
+
+  proc loadAllCommunities(self: Service): seq[CommunityDto] =
     try:
-      let joinedCommunities = self.loadJoinedComunities()
-      for community in joinedCommunities:
-        self.joinedCommunities[community.id] = community
-        if (community.admin):
-          self.joinedCommunities[community.id].pendingRequestsToJoin = self.pendingRequestsToJoinForCommunity(community.id)
+      let response = status_go.getAllCommunities()
+      return parseCommunities(response)
+    except Exception as e:
+      let errDesription = e.msg
+      error "error loading all communities: ", errDesription
+      return @[]
 
-      let curatedCommunities = self.loadCuratedCommunities()
-      for curatedCommunity in curatedCommunities:
-        self.curatedCommunities[curatedCommunity.communityId] = curatedCommunity
-
-      let allCommunities = self.loadAllCommunities()
-      for community in allCommunities:
-        self.allCommunities[community.id] = community
-
-      let communitiesSettings = self.loadCommunitiesSettings()
-      for settings in communitiesSettings:
-        if self.allCommunities.hasKey(settings.id):
-          self.allCommunities[settings.id].settings = settings
-        if self.joinedCommunities.hasKey(settings.id):
-          self.joinedCommunities[settings.id].settings = settings
-
-      self.loadMyPendingRequestsToJoin()
-
+  proc loadJoinedComunities(self: Service): seq[CommunityDto] =
+    try:
+      let response = status_go.getJoinedComunities()
+      return parseCommunities(response)
     except Exception as e:
       let errDesription = e.msg
       error "error: ", errDesription
-      return
-
-  proc loadAllCommunities(self: Service): seq[CommunityDto] =
-    let response = status_go.getAllCommunities()
-    return parseCommunities(response)
-
-  proc loadJoinedComunities(self: Service): seq[CommunityDto] =
-    let response = status_go.getJoinedComunities()
-    return parseCommunities(response)
+      return @[]
 
   proc loadCuratedCommunities(self: Service): seq[CuratedCommunity] =
-    let response = status_go.getCuratedCommunities()
-    return parseCuratedCommunities(response)
+    try:
+      let response = status_go.getCuratedCommunities()
+      return parseCuratedCommunities(response)
+    except Exception as e:
+      let errDesription = e.msg
+      error "error loading curated communities: ", errDesription
+      return @[]
 
   proc loadCommunitiesSettings(self: Service): seq[CommunitySettingsDto] =
-    let response = status_go.getCommunitiesSettings()
-    return parseCommunitiesSettings(response)
+    try:
+      let response = status_go.getCommunitiesSettings()
+      return parseCommunitiesSettings(response)
+    except Exception as e:
+      let errDesription = e.msg
+      error "error loading communities settings: ", errDesription
+      return
+
+  proc getCommunityTags*(self: Service): string =
+    return self.communityTags
 
   proc getJoinedCommunities*(self: Service): seq[CommunityDto] =
     return toSeq(self.joinedCommunities.values)
@@ -473,7 +517,7 @@ QtObject:
       if not response.result.hasKey("communitiesSettings") or response.result["communitiesSettings"].kind != JArray or response.result["communitiesSettings"].len == 0:
         error "error: ", procName="joinCommunity", errDesription = "no 'communitiesSettings' key in response"
         return
-        
+
       var updatedCommunity = response.result["communities"][0].toCommunityDto()
       let communitySettings = response.result["communitiesSettings"][0].toCommunitySettingsDto()
 
@@ -566,12 +610,17 @@ QtObject:
       outroMessage: string,
       access: int,
       color: string,
+      tags: string,
       imageUrl: string,
       aX: int, aY: int, bX: int, bY: int,
       historyArchiveSupportEnabled: bool,
       pinMessageAllMembersEnabled: bool) =
     try:
       var image = singletonInstance.utils.formatImagePath(imageUrl)
+      var tagsString = tags
+      if len(tagsString) == 0:
+        tagsString = "[]"
+
       let response = status_go.createCommunity(
         name,
         description,
@@ -579,6 +628,7 @@ QtObject:
         outroMessage,
         access,
         color,
+        tagsString,
         image,
         aX, aY, bX, bY,
         historyArchiveSupportEnabled,
@@ -610,6 +660,7 @@ QtObject:
       outroMessage: string,
       access: int,
       color: string,
+      tags: string,
       logoJsonStr: string,
       bannerJsonStr: string,
       historyArchiveSupportEnabled: bool,
@@ -618,6 +669,9 @@ QtObject:
       # TODO: refactor status-go to use `CroppedImage` for logo as it does for banner. This is an API breaking change, sync with mobile
       let logoJson = parseJson(logoJsonStr)
       let cropRectJson = logoJson["cropRect"]
+      var tagsString = tags
+      if len(tagsString) == 0:
+        tagsString = "[]"
       let response = status_go.editCommunity(
         id,
         name,
@@ -626,6 +680,7 @@ QtObject:
         outroMessage,
         access,
         color,
+        tagsString,
         logoJson["imagePath"].getStr(),
         int(cropRectJson["x"].getFloat()),
         int(cropRectJson["y"].getFloat()),
@@ -932,19 +987,17 @@ QtObject:
       if(communitiesSettingsJArr.len == 0):
         raise newException(RpcException, fmt"`communitiesSettings` array is empty in the response for community id: {communityKey}")
 
-      var chatsJArr: JsonNode
-      if(not response.result.getProp("chats", chatsJArr)):
-        raise newException(RpcException, fmt"there is no `chats` key in the response for community id: {communityKey}")
-
       var communityDto = communityJArr[0].toCommunityDto()
       let communitySettingsDto = communitiesSettingsJArr[0].toCommunitySettingsDto()
 
       communityDto.settings = communitySettingsDto
       self.joinedCommunities[communityDto.id] = communityDto
 
-      for chatObj in chatsJArr:
-        let chatDto = chatObj.toChatDto(communityDto.id)
-        self.chatService.updateOrAddChat(chatDto) # we have to update chats stored in the chat service.
+      var chatsJArr: JsonNode
+      if(response.result.getProp("chats", chatsJArr)):
+        for chatObj in chatsJArr:
+          let chatDto = chatObj.toChatDto(communityDto.id)
+          self.chatService.updateOrAddChat(chatDto) # we have to update chats stored in the chat service.
 
       for chat in communityDto.chats:
         let fullChatId = communityDto.id & chat.id
@@ -1019,11 +1072,39 @@ QtObject:
       var pubKeys: seq[string] = @[]
       for pubKey in pubKeysParsed:
         pubKeys.add(pubKey.getStr)
-      let response =  status_go.inviteUsersToCommunity(communityId, pubKeys)
+      # We no longer send invites, but merely share the community so 
+      # users can request access (with automatic acception)
+      let response =  status_go.shareCommunityToUsers(communityId, pubKeys)
       discard self.chatService.processMessageUpdateAfterSend(response)
     except Exception as e:
-      error "Error inviting to community", msg = e.msg
-      result = "Error exporting community: " & e.msg
+      error "Error sharing community", msg = e.msg
+      result = "Error sharing community: " & e.msg
+
+  proc muteCategory*(self: Service, communityId: string, categoryId: string) =
+    try:
+      let response = status_go.muteCategory(communityId, categoryId)
+      if (not response.error.isNil):
+        let msg = response.error.message & " categoryId=" & categoryId
+        error "error while mute category ", msg
+        return
+
+      self.events.emit(SIGNAL_CATEGORY_MUTED, CategoryArgs(communityId: communityId, categoryId: categoryId))
+
+    except Exception as e:
+      error "Error muting category", msg = e.msg
+
+  proc unmuteCategory*(self: Service, communityId: string, categoryId: string) =
+    try:
+      let response = status_go.unmuteCategory(communityId, categoryId)
+      if (not response.error.isNil):
+        let msg = response.error.message & " categoryId=" & categoryId
+        error "error while unmute category ", msg
+        return
+
+      self.events.emit(SIGNAL_CATEGORY_UNMUTED, CategoryArgs(communityId: communityId, categoryId: categoryId))
+
+    except Exception as e:
+      error "Error unmuting category", msg = e.msg
 
   proc removeUserFromCommunity*(self: Service, communityId: string, pubKey: string)  =
     try:

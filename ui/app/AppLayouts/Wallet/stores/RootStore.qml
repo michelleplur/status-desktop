@@ -13,7 +13,6 @@ QtObject {
     property var accountSensitiveSettings: localAccountSensitiveSettings
     property string locale: appSettings.locale
     property bool hideSignPhraseModal: accountSensitiveSettings.hideSignPhraseModal
-    property bool isMultiNetworkEnabled: accountSensitiveSettings.isMultiNetworkEnabled
 
     property string currentCurrency: walletSection.currentCurrency
     property string totalCurrencyBalance: walletSection.totalCurrencyBalance
@@ -36,6 +35,7 @@ QtObject {
     property var layer2Networks: networksModule.layer2
     property var testNetworks: networksModule.test
     property var enabledNetworks: networksModule.enabled
+    property var allNetworks: networksModule.all
 
     property var cryptoRampServicesModel: walletSectionBuySellCrypto.model
 

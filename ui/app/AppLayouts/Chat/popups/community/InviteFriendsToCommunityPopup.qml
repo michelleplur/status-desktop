@@ -35,23 +35,23 @@ StatusModal {
         contentItem.contactListSearch.noContactsRect.visible = !contentItem.contactListSearch.existingContacts.visible;
     }
 
-    //% "Invite friends"
-    header.title: qsTrId("invite-friends")
+    margins: 32
+    height: 550
 
-    function proccesInviteResult(error) {
+    header.title: qsTr("Invite friends")
+
+    function processInviteResult(error) {
         if (error) {
             console.error('Error inviting', error)
             contactFieldAndList.validationError = error
             return
         }
-        //% "Invite successfully sent"
-        popup.contentItem.contactListSearch.successMessage = qsTrId("invite-successfully-sent")
+        popup.contentItem.contactListSearch.successMessage = qsTr("Invite successfully sent")
     }
 
     contentItem: CommunityProfilePopupInviteFriendsPanel {
         id: contactFieldAndList
         rootStore: popup.rootStore
-        communitySectionModule: popup.communitySectionModule
         contactsStore: popup.contactsStore
         community: popup.community
     }
@@ -71,8 +71,7 @@ StatusModal {
     rightButtons: [
         StatusButton {
             enabled: popup.contentItem.contactListSearch.pubKeys.length > 0
-            //% "Invite"
-            text: qsTrId("invite-button")
+            text: qsTr("Invite")
             onClicked : {
                 popup.sendInvites(popup.contentItem.contactListSearch.pubKeys)
             }

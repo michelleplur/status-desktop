@@ -6,9 +6,9 @@ export response_type
 proc getAccounts*(): RpcResponse[JsonNode] {.raises: [Exception].} =
   return core.callPrivateRPC("eth_accounts")
 
-proc getBlockByNumber*(blockNumber: string): RpcResponse[JsonNode] {.raises: [Exception].} =
-  let payload = %* [blockNumber, false]
-  return core.callPrivateRPC("eth_getBlockByNumber", payload)
+proc getBlockByNumber*(chainId: int, blockNumber: string, fullTransactionObject = false): RpcResponse[JsonNode] {.raises: [Exception].} =
+  let payload = %* [blockNumber, fullTransactionObject]
+  return core.callPrivateRPCWithChainId("eth_getBlockByNumber", chainId, payload)
 
 proc getNativeChainBalance*(chainId: int, address: string): RpcResponse[JsonNode] {.raises: [Exception].} =
   let payload = %* [address, "latest"]
@@ -24,13 +24,10 @@ proc doEthCall*(payload = %* []): RpcResponse[JsonNode] {.raises: [Exception].} 
 proc estimateGas*(chainId: int, payload = %* []): RpcResponse[JsonNode] {.raises: [Exception].} =
   core.callPrivateRPCWithChainId("eth_estimateGas", chainId, payload)
 
-proc getEthAccounts*(): RpcResponse[JsonNode] {.raises: [Exception].} =
-  return core.callPrivateRPC("eth_accounts")
-
 proc suggestedFees*(chainId: int): RpcResponse[JsonNode] {.raises: [Exception].} =
   let payload = %* [chainId]
   return core.callPrivateRPC("wallet_getSuggestedFees", payload)
 
-proc suggestedRoutes*(account: string, amount: float64, token: string): RpcResponse[JsonNode] {.raises: [Exception].} =
-  let payload = %* [account, amount, token]
+proc suggestedRoutes*(account: string, amount: float64, token: string, disabledChainIDs: seq[uint64]): RpcResponse[JsonNode] {.raises: [Exception].} =
+  let payload = %* [account, amount, token, disabledChainIDs]
   return core.callPrivateRPC("wallet_getSuggestedRoutes", payload)

@@ -1,4 +1,4 @@
-import json, os, chronicles, utils
+import json, os, chronicles
 import ../../constants as main_constants
 
 # set via `nim c` param `-d:INFURA_TOKEN:[token]`; should be set in CI/release builds
@@ -27,95 +27,15 @@ let DEFAULT_TORRENT_CONFIG_DATADIR* = joinPath(main_constants.defaultDataDir(), 
 let DEFAULT_TORRENT_CONFIG_TORRENTDIR* = joinPath(main_constants.defaultDataDir(), "data", "torrents")
 
 
-const DEFAULT_NETWORK_NAME* = "mainnet_rpc"
-const DEFAULT_NETWORKS_IDS* = @["mainnet_rpc", "testnet_rpc", "rinkeby_rpc", "goerli_rpc", "xdai_rpc", "poa_rpc" ]
-
-let DEFAULT_NETWORKS* = %* [
-  {
-    "id": "testnet_rpc",
-    "etherscan-link": "https://ropsten.etherscan.io/address/",
-    "name": "Ropsten with upstream RPC",
-    "config": {
-      "NetworkId": 3,
-      "DataDir": "/ethereum/testnet_rpc",
-      "UpstreamConfig": {
-        "Enabled": true,
-        "URL": "https://ropsten.infura.io/v3/" & INFURA_TOKEN_RESOLVED
-      }
-    }
-  },
-  {
-    "id": "rinkeby_rpc",
-    "etherscan-link": "https://rinkeby.etherscan.io/address/",
-    "name": "Rinkeby with upstream RPC",
-    "config": {
-      "NetworkId": 4,
-      "DataDir": "/ethereum/rinkeby_rpc",
-      "UpstreamConfig": {
-        "Enabled": true,
-        "URL": "https://rinkeby.infura.io/v3/" & INFURA_TOKEN_RESOLVED
-      }
-    }
-  },
-  {
-    "id": "goerli_rpc",
-    "etherscan-link": "https://goerli.etherscan.io/address/",
-    "name": "Goerli with upstream RPC",
-    "config": {
-      "NetworkId": 5,
-      "DataDir": "/ethereum/goerli_rpc",
-      "UpstreamConfig": {
-        "Enabled": true,
-        "URL": "https://goerli.blockscout.com/"
-      }
-    }
-  },
-  {
-    "id": "mainnet_rpc",
-    "etherscan-link": "https://etherscan.io/address/",
-    "name": "Mainnet with upstream RPC",
-    "config": {
-      "NetworkId": 1,
-      "DataDir": "/ethereum/mainnet_rpc",
-      "UpstreamConfig": {
-        "Enabled": true,
-        "URL": "https://mainnet.infura.io/v3/" & INFURA_TOKEN_RESOLVED
-      }
-    }
-  },
-  {
-    "id": "xdai_rpc",
-    "name": "xDai Chain",
-    "config": {
-      "NetworkId": 100,
-      "DataDir": "/ethereum/xdai_rpc",
-      "UpstreamConfig": {
-        "Enabled": true,
-        "URL": "https://dai.poa.network"
-      }
-    }
-  },
-  {
-    "id": "poa_rpc",
-    "name": "POA Network",
-    "config": {
-      "NetworkId": 99,
-      "DataDir": "/ethereum/poa_rpc",
-      "UpstreamConfig": {
-        "Enabled": true,
-        "URL": "https://core.poa.network"
-      }
-    }
-  }
-]
-
 let NETWORKS* = %* [
   {
     "chainId": 1,
     "chainName": "Mainnet",
     "rpcUrl": "https://mainnet.infura.io/v3/" & INFURA_TOKEN_RESOLVED,
     "blockExplorerUrl": "https://etherscan.io/",
-    "iconUrl": "",
+    "iconUrl": "network/Network=Ethereum",
+    "chainColor": "#627EEA",
+    "shortName": "eth",
     "nativeCurrencyName": "Ether",
     "nativeCurrencySymbol": "ETH",
     "nativeCurrencyDecimals": 18,
@@ -128,7 +48,9 @@ let NETWORKS* = %* [
     "chainName": "Ropsten",
     "rpcUrl": "https://ropsten.infura.io/v3/" & INFURA_TOKEN_RESOLVED,
     "blockExplorerUrl": "https://ropsten.etherscan.io/",
-    "iconUrl": "",
+    "iconUrl": "network/Network=Tetnet",
+    "chainColor": "#939BA1",
+    "shortName": "ropEth",
     "nativeCurrencyName": "Ether",
     "nativeCurrencySymbol": "ETH",
     "nativeCurrencyDecimals": 18,
@@ -141,7 +63,9 @@ let NETWORKS* = %* [
     "chainName": "Rinkeby",
     "rpcUrl": "https://rinkeby.infura.io/v3/" & INFURA_TOKEN_RESOLVED,
     "blockExplorerUrl": "https://rinkeby.etherscan.io/",
-    "iconUrl": "",
+    "iconUrl": "network/Network=Tetnet",
+    "chainColor": "#939BA1",
+    "shortName": "rinEth",
     "nativeCurrencyName": "Ether",
     "nativeCurrencySymbol": "ETH",
     "nativeCurrencyDecimals": 18,
@@ -154,7 +78,9 @@ let NETWORKS* = %* [
     "chainName": "Goerli",
     "rpcUrl": "http://goerli.blockscout.com/",
     "blockExplorerUrl": "https://goerli.etherscan.io/",
-    "iconUrl": "",
+    "iconUrl": "network/Network=Tetnet",
+    "chainColor": "#939BA1",
+    "shortName": "goeEth",
     "nativeCurrencyName": "Ether",
     "nativeCurrencySymbol": "ETH",
     "nativeCurrencyDecimals": 18,
@@ -167,7 +93,9 @@ let NETWORKS* = %* [
     "chainName": "Optimism",
     "rpcUrl": "https://optimism-mainnet.infura.io/v3/" & INFURA_TOKEN_RESOLVED,
     "blockExplorerUrl": "https://optimistic.etherscan.io",
-    "iconUrl": "",
+    "iconUrl": "network/Network=Optimism",
+    "chainColor": "#E90101",
+    "shortName": "opt",
     "nativeCurrencyName": "Ether",
     "nativeCurrencySymbol": "ETH",
     "nativeCurrencyDecimals": 18,
@@ -180,7 +108,9 @@ let NETWORKS* = %* [
     "chainName": "Optimism Kovan",
     "rpcUrl": "https://optimism-kovan.infura.io/v3/" & INFURA_TOKEN_RESOLVED,
     "blockExplorerUrl": "https://kovan-optimistic.etherscan.io",
-    "iconUrl": "",
+    "iconUrl": "network/Network=Tetnet",
+    "chainColor": "#939BA1",
+    "shortName": "kovOpt",
     "nativeCurrencyName": "Ether",
     "nativeCurrencySymbol": "ETH",
     "nativeCurrencyDecimals": 18,
@@ -193,7 +123,9 @@ let NETWORKS* = %* [
     "chainName": "Arbitrum",
     "rpcUrl": "https://arbitrum-mainnet.infura.io/v3/" & INFURA_TOKEN_RESOLVED,
     "blockExplorerUrl": "https://arbiscan.io/",
-    "iconUrl": "",
+    "iconUrl": "network/Network=Arbitrum",
+    "chainColor": "#51D0F0",
+    "shortName": "arb",
     "nativeCurrencyName": "Ether",
     "nativeCurrencySymbol": "ETH",
     "nativeCurrencyDecimals": 18,
@@ -206,7 +138,9 @@ let NETWORKS* = %* [
     "chainName": "Arbitrum Rinkeby",
     "rpcUrl": "https://arbitrum-rinkeby.infura.io/v3/" & INFURA_TOKEN_RESOLVED,
     "blockExplorerUrl": " https://testnet.arbiscan.io",
-    "iconUrl": "",
+    "iconUrl": "network/Network=Tetnet",
+    "chainColor": "#939BA1",
+    "shortName": "rinArb",
     "nativeCurrencyName": "Ether",
     "nativeCurrencySymbol": "ETH",
     "nativeCurrencyDecimals": 18,
@@ -307,6 +241,3 @@ var NODE_CONFIG* = %* {
     "TorrentDir": DEFAULT_TORRENT_CONFIG_TORRENTDIR
   }
 }
-
-proc getNetworkConfig*(currentNetwork: string): JsonNode =
-  result = DEFAULT_NETWORKS.first("id", currentNetwork)

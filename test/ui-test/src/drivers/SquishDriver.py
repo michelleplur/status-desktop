@@ -25,7 +25,7 @@ _MIN_WAIT_OBJ_TIMEOUT = 500
 
 # Waits for the given object is loaded, visible and enabled.
 # It returns a tuple: True in case it is found. Otherwise, false. And the object itself.
-def is_loaded_visible_and_enabled(objName, timeout=_MAX_WAIT_OBJ_TIMEOUT):
+def is_loaded_visible_and_enabled(objName: str, timeout: int=_MAX_WAIT_OBJ_TIMEOUT):
     obj = None
     try:
         obj = squish.waitForObject(getattr(names, objName), timeout)
@@ -36,13 +36,20 @@ def is_loaded_visible_and_enabled(objName, timeout=_MAX_WAIT_OBJ_TIMEOUT):
 
 # Waits for the given object is loaded and might be not visible and/or not enabled:
 # It returns a tuple: True in case it is found. Otherwise, false. And the object itself.
-def is_loaded(objName):
+def is_loaded(objName: str):
     obj = None
     try:
         obj = squish.findObject(getattr(names, objName))
         return True, obj
     except LookupError:
         return False, obj
+
+def is_Visible(objName: str):
+    try:
+        squish.findObject(getattr(names, objName))
+        return True
+    except LookupError:
+        return False
 
 
 # It checks if the given object is visible and enabled.
@@ -66,37 +73,39 @@ def click_obj(obj):
     except LookupError:
         return False
 
+def get_obj(objName: str):
+        obj = squish.findObject(getattr(names, objName))
+        return obj
+
 
 # It executes the click action into object with given object name:
-def click_obj_by_name(objName):
-    try:
+def click_obj_by_name(objName: str):
         obj = squish.waitForObject(getattr(names, objName))
         squish.mouseClick(obj, squish.Qt.LeftButton)
-        return True
-    except LookupError:
-        return False
 
 
-def check_obj_by_name(objName):
-    try:
+def scroll_obj_by_name(objName: str):
+        obj = squish.waitForObject(getattr(names, objName))
+        squish.mouseWheel(obj, 206, 35, 0, -1, squish.Qt.ControlModifier)
+
+
+def check_obj_by_name(objName: str):
         obj = squish.waitForObject(getattr(names, objName))
         obj.checked = True
-        return True
-    except LookupError:
-        return False
 
 
-def is_text_matching(objName, text):
+def is_text_matching(objName: str, text: str):
     try:
         obj = squish.waitForObject(getattr(names, objName))
         test.compare(obj.text, text, "Found the following text " + text)
         return True
     except LookupError:
+        print(objName + " is not found, please check app for correct object and update object mapper")
         return False
 
 
 # It types the specified text into the given object (as if the user had used the keyboard):
-def type(objName, text):
+def type(objName: str, text: str):
     try:
         obj = squish.findObject(getattr(names, objName))
         squish.type(obj, text)

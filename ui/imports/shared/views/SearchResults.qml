@@ -42,18 +42,17 @@ Item {
         isAddedContact = false
     }
 
-    function isContactAdded() {
-        return root.pubKey != "" ? Utils.getContactDetailsAsJson(root.pubKey).isContact : false
+    function isUserAdded() {
+        return root.pubKey != "" ? Utils.getContactDetailsAsJson(root.pubKey).isAdded : false
     }
 
     onPubKeyChanged: {
-        root.isAddedContact = root.isContactAdded()
+        root.isAddedContact = root.isUserAdded()
     }
 
     StyledText {
         id: nonContactsLabel
-        //% "Non contacts"
-        text: qsTrId("non-contacts")
+        text: qsTr("Non contacts")
         anchors.top: parent.top
         color: Style.current.secondaryText
         font.pixelSize: 15
@@ -87,7 +86,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             anchors.left: parent.left
             anchors.leftMargin: Style.current.padding
-            name: root.userName
+            name: root.username
         }
 
         StyledText {
@@ -161,8 +160,7 @@ Item {
         font.pixelSize: 15
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
-        //% "No profile found"
-        text: qsTrId("no-profile-found")
+        text: qsTr("No profile found")
     }
 
 }

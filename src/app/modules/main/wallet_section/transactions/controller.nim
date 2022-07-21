@@ -69,7 +69,7 @@ proc checkPendingTransactions*(self: Controller) =
   self.transactionService.checkPendingTransactions()
 
 proc checkRecentHistory*(self: Controller) =
-  self.transactionService.checkRecentHistory()
+  self.walletAccountService.checkRecentHistory()
 
 proc getWalletAccounts*(self: Controller): seq[WalletAccountDto] =
   self.walletAccountService.getWalletAccounts()
@@ -97,8 +97,8 @@ proc suggestedFees*(self: Controller, chainId: int): string =
   let suggestedFees = self.transactionService.suggestedFees(chainId)
   return suggestedFees.toJson()
 
-proc suggestedRoutes*(self: Controller, account: string, amount: float64, token: string): string = 
-  let suggestedRoutes = self.transactionService.suggestedRoutes(account, amount, token)
+proc suggestedRoutes*(self: Controller, account: string, amount: float64, token: string, disabledChainIDs: seq[uint64]): string =
+  let suggestedRoutes = self.transactionService.suggestedRoutes(account, amount, token, disabledChainIDs)
   return suggestedRoutes.toJson()
 
 proc getChainIdForChat*(self: Controller): int =
@@ -106,3 +106,6 @@ proc getChainIdForChat*(self: Controller): int =
 
 proc getChainIdForBrowser*(self: Controller): int =
   return self.networkService.getNetworkForBrowser().chainId
+
+proc getEstimatedTime*(self: Controller, chainId: int, maxFeePerGas: string): EstimatedTime = 
+  return self.transactionService.getEstimatedTime(chainId, maxFeePerGas)

@@ -8,12 +8,17 @@ import StatusQ.Controls 0.1
 import StatusQ.Components 0.1
 
 import utils 1.0
-import "stores"
+import shared.popups 1.0
 
-ScrollView {
+import "stores"
+import "popups"
+
+StatusScrollView {
     id: root
 
     property CommunitiesStore communitiesStore: CommunitiesStore {}
+    property var importCommunitiesPopup: importCommunitiesPopupComponent
+    property var createCommunitiesPopup: createCommunitiesPopupComponent
 
     QtObject {
         id: d
@@ -27,7 +32,7 @@ ScrollView {
         property int subtitlePixelSize: 17
 
         function navigateToCommunity(communityId) {
-            console.warn("TODO: Navigate to community ID: " + communityId)
+            root.communitiesStore.setActiveCommunity(communityId)
         }
     }
 
@@ -75,13 +80,13 @@ ScrollView {
             StatusButton {
                 id: importBtn
                 text: qsTr("Import Community")
-                enabled: false // Out of scope
+                onClicked: Global.openPopup(importCommunitiesPopupComponent)
             }
 
             StatusButton {
                 id: createBtn
-                text: qsTr("Creat New Community")
-                enabled: false // Out of scope
+                text: qsTr("Create New Community")
+                onClicked: Global.openPopup(createCommunitiesPopupComponent)
             }
         }
 
@@ -183,6 +188,28 @@ ScrollView {
 
                     onClicked: { d.navigateToCommunity(communityId) }
                 }
+            }
+        }
+    }
+
+    Component {
+        id: importCommunitiesPopupComponent
+        ImportCommunityPopup {
+            anchors.centerIn: parent
+            store: root.communitiesStore
+            onClosed: {
+                destroy()
+            }
+        }
+    }
+
+    Component {
+        id: createCommunitiesPopupComponent
+        CreateCommunityPopup {
+            anchors.centerIn: parent
+            store: root.communitiesStore
+            onClosed: {
+                destroy()
             }
         }
     }

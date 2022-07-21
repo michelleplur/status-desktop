@@ -5,6 +5,8 @@ import ../shared_models/active_section
 import io_interface
 import chat_search_model
 import ephemeral_notification_model
+from ../../../app_service/common/conversion import intToEnum
+from ../../../app_service/common/types import StatusType
 
 QtObject:
   type
@@ -103,6 +105,9 @@ QtObject:
   proc removeEphemeralNotification*(self: View, id: string) {.slot.} =
     self.delegate.removeEphemeralNotification(id.parseInt)
 
+  proc ephemeralNotificationClicked*(self: View, id: string) {.slot.} =
+    self.delegate.ephemeralNotificationClicked(id.parseInt)
+
   proc openStoreToKeychainPopup*(self: View) {.signal.}
 
   proc offerToStorePassword*(self: View) =
@@ -153,8 +158,8 @@ QtObject:
   proc switchTo*(self: View, sectionId: string, chatId: string) {.slot.} =
     self.delegate.switchTo(sectionId, chatId)
 
-  proc setUserStatus*(self: View, status: bool) {.slot.} =
-    self.delegate.setUserStatus(status)
+  proc setCurrentUserStatus*(self: View, status: int) {.slot.} =
+    self.delegate.setCurrentUserStatus(intToEnum(status, StatusType.Unknown))
 
   # Since we cannot return QVariant from the proc which has arguments, so cannot have proc like this:
   # prepareCommunitySectionModuleForCommunityId(self: View, communityId: string): QVariant {.slot.}

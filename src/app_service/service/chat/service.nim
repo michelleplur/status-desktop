@@ -24,8 +24,7 @@ logScope:
 include ../../common/json_utils
 
 type
-  # TODO remove New when refactored
-  ChatUpdateArgsNew* = ref object of Args
+  ChatUpdateArgs* = ref object of Args
     chats*: seq[ChatDto]
     messages*: seq[MessageDto]
     # TODO refactor that part
@@ -36,6 +35,9 @@ type
     activityCenterNotifications*: seq[ActivityCenterNotificationDto]
     # statusUpdates*: seq[StatusUpdate]
     # deletedMessages*: seq[RemovedMessage]
+
+  CreatedChatArgs* = ref object of Args
+    chat*: ChatDto
 
   ChatArgs* = ref object of Args
     communityId*: string # This param should be renamed to `sectionId`, that will avoid some confusions one may have.
@@ -86,6 +88,7 @@ const SIGNAL_CHAT_MEMBER_REMOVED* = "chatMemberRemoved"
 const SIGNAL_CHAT_MEMBER_UPDATED* = "chatMemberUpdated"
 const SIGNAL_CHAT_SWITCH_TO_OR_CREATE_1_1_CHAT* = "switchToOrCreateOneToOneChat"
 const SIGNAL_CHAT_ADDED_OR_UPDATED* = "chatAddedOrUpdated"
+const SIGNAL_CHAT_CREATED* = "chatCreated"
 
 QtObject:
   type Service* = ref object of QObject
@@ -117,7 +120,11 @@ QtObject:
           if (chatDto.active):
             chats.add(chatDto)
             self.updateOrAddChat(chatDto)
-        self.events.emit(SIGNAL_CHAT_UPDATE, ChatUpdateArgsNew(messages: receivedData.messages, chats: chats))
+        self.events.emit(SIGNAL_CHAT_UPDATE, ChatUpdateArgs(messages: receivedData.messages, chats: chats))
+
+      if (receivedData.clearedHistories.len > 0):
+        for clearedHistoryDto in receivedData.clearedHistories:
+          self.events.emit(SIGNAL_CHAT_HISTORY_CLEARED, ChatArgs(chatId: clearedHistoryDto.chatId))
   
   proc sortPersonnalChatAsFirst[T, D](x, y: (T, D)): int =
     if (x[1].channelGroupType == Personal): return -1
@@ -181,7 +188,6 @@ QtObject:
       self.channelGroups[channelGroupId].chats.add(chat)
     else:
       self.channelGroups[channelGroupId].chats[index] = chat
-    
 
   proc parseChatResponse*(self: Service, response: RpcResponse[JsonNode]): (seq[ChatDto], seq[MessageDto]) =
     var chats: seq[ChatDto] = @[]
@@ -197,24 +203,14 @@ QtObject:
         chats.add(chat)
     result = (chats, messages)
 
-  proc processMessageUpdateAfterSend*(self: Service, response: RpcResponse[JsonNode]): (seq[ChatDto], seq[MessageDto])  =
+  proc processMessageUpdateAfterSend*(self: Service, response: RpcResponse[JsonNode]): (seq[ChatDto], seq[MessageDto]) =
     result = self.parseChatResponse(response)
     var (chats, messages) = result
     if chats.len == 0 or messages.len == 0:
       error "no chats or messages in the parsed response"
       return
 
-    # The reason why we are sending all the messages with responseTo filled in is because
-    # the reposnse from status_go doesnt necessarily contain the last reply on the 0th position.
-    var isaReply = false
-    var msg = messages[0]
-    for m in messages:
-      if(m.responseTo.len > 0):
-        isaReply = true
-        msg = m
-        self.events.emit(SIGNAL_SENDING_SUCCESS, MessageSendingSuccess(message: msg, chat: chats[0]))
-
-    if not isaReply:
+    for msg in messages:
       self.events.emit(SIGNAL_SENDING_SUCCESS, MessageSendingSuccess(message: msg, chat: chats[0]))
 
   proc processUpdateForTransaction*(self: Service, messageId: string, response: RpcResponse[JsonNode]) =
@@ -223,7 +219,7 @@ QtObject:
 
   proc emitUpdate(self: Service, response: RpcResponse[JsonNode]) =
     var (chats, messages) = self.parseChatResponse(response)
-    self.events.emit(SIGNAL_CHAT_UPDATE, ChatUpdateArgsNew(messages: messages, chats: chats))
+    self.events.emit(SIGNAL_CHAT_UPDATE, ChatUpdateArgs(messages: messages, chats: chats))
 
   proc getAllChats*(self: Service): seq[ChatDto] =
     return toSeq(self.chats.values)
@@ -236,11 +232,11 @@ QtObject:
       if (showWarning):
         warn "trying to get chat data for an unexisting chat id", chatId
       return
-    
+
     return self.chats[chatId]
 
   proc getOneToOneChatNameAndImage*(self: Service, chatId: string):
-    tuple[name: string, image: string] =
+      tuple[name: string, image: string, largeImage: string] =
     return self.contactService.getContactNameAndImage(chatId)
 
   proc createChatFromResponse(self: Service, response: RpcResponse[JsonNode]): tuple[chatDto: ChatDto, success: bool] =
@@ -279,6 +275,8 @@ QtObject:
 
       let response =  status_group_chat.createOneToOneChat(communityID, chatId, ensName)
       result = self.createChatFromResponse(response)
+      if result.success:
+        self.events.emit(SIGNAL_CHAT_CREATED, CreatedChatArgs(chat: result.chatDto))
     except Exception as e:
       let errDesription = e.msg
       error "error: ", errDesription
@@ -302,8 +300,13 @@ QtObject:
 
       discard status_chat.deactivateChat(chatId)
 
+      var channelGroupId = chat.communityId
+      if (channelGroupId == ""):
+        channelGroupId = singletonInstance.userProfile.getPubKey()
+
+      self.channelGroups[channelGroupId].chats.delete(self.getChatIndex(channelGroupId, chatId))
       self.chats.del(chatId)
-      discard status_chat.clearChatHistory(chatId)
+      discard status_chat.deleteMessagesByChatId(chatId)
       self.events.emit(SIGNAL_CHAT_LEFT, ChatArgs(chatId: chatId))
     except Exception as e:
       error "Error deleting channel", chatId, msg = e.msg
@@ -436,7 +439,7 @@ QtObject:
 
   proc clearChatHistory*(self: Service, chatId: string) =
     try:
-      let response = status_chat.deleteMessagesByChatId(chatId)
+      let response = status_chat.clearChatHistory(chatId)
       if(not response.error.isNil):
         let msg = response.error.message & " chatId=" & chatId
         error "error while clearing chat history ", msg
@@ -502,14 +505,6 @@ QtObject:
     except Exception as e:
       error "error while making user admin: ", msg = e.msg
 
-
-  proc confirmJoiningGroup*(self: Service, communityID: string, chatID: string) =
-    try:
-      let response = status_group_chat.confirmJoiningGroup(communityID, chatId)
-      self.emitUpdate(response)
-    except Exception as e:
-      error "error while confirmation joining to group: ", msg = e.msg
-
   proc createGroupChatFromInvitation*(self: Service, groupName: string, chatId: string, adminPK: string): tuple[chatDto: ChatDto, success: bool]  =
     try:
       let response = status_group_chat.createGroupChatFromInvitation(groupName, chatId, adminPK)
@@ -521,6 +516,8 @@ QtObject:
     try:
       let response = status_group_chat.createGroupChat(communityID, name, members)
       result = self.createChatFromResponse(response)
+      if result.success:
+        self.events.emit(SIGNAL_CHAT_CREATED, CreatedChatArgs(chat: result.chatDto))
     except Exception as e:
       error "error while creating group chat", msg = e.msg
 

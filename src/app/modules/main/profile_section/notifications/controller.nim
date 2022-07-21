@@ -35,10 +35,6 @@ proc delete*(self: Controller) =
   discard
 
 proc init*(self: Controller) =
-  self.events.on(TOGGLE_SECTION) do(e:Args):
-    let args = ToggleSectionArgs(e)
-    self.delegate.onToggleSection(args.sectionType)
-
   self.events.on(SIGNAL_COMMUNITY_JOINED) do(e:Args):
     let args = CommunityArgs(e)
     if(args.error.len > 0):
@@ -79,7 +75,7 @@ proc init*(self: Controller) =
     self.delegate.removeItemWithId(args.chatId)
 
   self.events.on(SIGNAL_CHAT_UPDATE) do(e: Args):
-    var args = ChatUpdateArgsNew(e)
+    var args = ChatUpdateArgs(e)
     for chat in args.chats:
       let belongsToCommunity = chat.communityId.len > 0
       self.delegate.addChat(chat)

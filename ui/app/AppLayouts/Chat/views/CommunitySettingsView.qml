@@ -16,24 +16,39 @@ import StatusQ.Controls 0.1
 import StatusQ.Controls.Validators 0.1
 
 import "../panels/communities"
+import "../popups/community"
 import "../layouts"
 
 StatusAppTwoPanelLayout {
     id: root
 
     // TODO: get this model from backend?
-    property var model: [{name: qsTr("Overview"), icon: "help"},
-                        {name: qsTr("Members"), icon: "group-chat"},
-//                        {name: qsTr("Permissions"), icon: "objects"},
-//                        {name: qsTr("Tokens"), icon: "token"},
-//                        {name: qsTr("Airdrops"), icon: "airdrop"},
-//                        {name: qsTr("Token sales"), icon: "token-sale"},
-//                        {name: qsTr("Subscriptions"), icon: "subscription"},
-                        {name: qsTr("Notifications"), icon: "notification"}]
+    property var settingsMenuModel: [
+        {name: qsTr("Overview"), icon: "help"},
+        {name: qsTr("Members"), icon: "group-chat"},
+//        {name: qsTr("Permissions"), icon: "objects"},
+//        {name: qsTr("Tokens"), icon: "token"},
+//        {name: qsTr("Airdrops"), icon: "airdrop"},
+//        {name: qsTr("Token sales"), icon: "token-sale"},
+//        {name: qsTr("Subscriptions"), icon: "subscription"}
+    ]
 
     property var rootStore
     property var community
     property var chatCommunitySectionModule
+    property bool hasAddedContacts: false
+    property Component membershipRequestPopup
+
+    readonly property string filteredSelectedTags: {
+        if (!community || !community.tags)
+            return "";
+
+        const json = JSON.parse(community.tags);
+        const tagsArray = json.map(tag => {
+            return tag.name;
+        });
+        return JSON.stringify(tagsArray);
+    }
 
     signal backToCommunityClicked
     signal openLegacyPopupClicked // TODO: remove me when migration to new settings is done
@@ -59,12 +74,12 @@ StatusAppTwoPanelLayout {
             Layout.fillWidth: true
             implicitHeight: contentItem.childrenRect.height
 
-            model: root.model
+            model: root.settingsMenuModel
             delegate: StatusNavigationListItem {
                 width: listView.width
                 title: modelData.name
                 icon.name: modelData.icon
-                selected: d.currentIndex == index
+                selected: d.currentIndex === index
                 onClicked: d.currentIndex = index
             }
         }
@@ -114,6 +129,7 @@ StatusAppTwoPanelLayout {
             currentIndex: d.currentIndex
 
             CommunityOverviewSettingsPanel {
+                communityId: root.community.id
                 name: root.community.name
                 description: root.community.description
                 introMessage: root.community.introMessage
@@ -121,6 +137,8 @@ StatusAppTwoPanelLayout {
                 logoImageData: root.community.image
                 bannerImageData: root.community.bannerImageData
                 color: root.community.color
+                tags: root.rootStore.communityTags
+                selectedTags: root.filteredSelectedTags
                 archiveSupportEnabled: root.community.historyArchiveSupportEnabled
                 requestToJoinEnabled: root.community.access === Constants.communityChatOnRequestAccess
                 pinMessagesEnabled: root.community.pinMessageAllMembersEnabled
@@ -136,6 +154,7 @@ StatusAppTwoPanelLayout {
                         Utils.filterXSS(item.outroMessage),
                         item.options.requestToJoinEnabled ? Constants.communityChatOnRequestAccess : Constants.communityChatPublicAccess,
                         item.color.toString().toUpperCase(),
+                        item.selectedTags,
                         JSON.stringify({imagePath: String(item.logoImagePath).replace("file://", ""), cropRect: item.logoCropRect}),
                         JSON.stringify({imagePath: String(item.bannerPath).replace("file://", ""), cropRect: item.bannerCropRect}),
                         item.options.archiveSupportEnabled,
@@ -145,6 +164,20 @@ StatusAppTwoPanelLayout {
                         errorDialog.text = error.error
                         errorDialog.open()
                     }
+                }
+
+                onInviteNewPeopleClicked: {
+                    Global.openPopup(inviteFriendsToCommunityPopup, {
+                                         community: root.community,
+                                         hasAddedContacts: root.hasAddedContacts
+                                     })
+                }
+
+                onAirdropTokensClicked: { /* TODO in future */ }
+                onBackUpClicked: {
+                    Global.openPopup(transferOwnershipPopup, {
+                        privateKey: root.chatCommunitySectionModule.exportCommunity(root.communityId),
+                    })
                 }
             }
 
@@ -156,33 +189,9 @@ StatusAppTwoPanelLayout {
                 onUserProfileClicked: Global.openProfilePopup(id)
                 onKickUserClicked: root.rootStore.removeUserFromCommunity(id)
                 onBanUserClicked: root.rootStore.banUserFromCommunity(id)
-                onMembershipRequestsClicked: Global.openPopup(membershipRequestPopup, {
+                onMembershipRequestsClicked: Global.openPopup(root.membershipRequestPopup, {
                     communitySectionModule: root.chatCommunitySectionModule
                 })
-            }
-
-            SettingsPageLayout {
-                title: qsTr("Notifications")
-
-                content: ColumnLayout {
-                    StatusListItem {
-                        Layout.fillWidth: true
-
-                        title: qsTr("Enabled")
-                        icon.name: "notification"
-                        sensor.cursorShape: Qt.ArrowCursor
-                        components: [
-                            StatusSwitch {
-                                checked: !root.community.muted
-                                onClicked: root.chatCommunitySectionModule.setCommunityMuted(!checked)
-                            }
-                        ]
-                    }
-
-                    Item {
-                        Layout.fillHeight: true
-                    }
-                }
             }
         }
     }
@@ -198,5 +207,30 @@ StatusAppTwoPanelLayout {
         title: qsTr("Error editing the community")
         icon: StandardIcon.Critical
         standardButtons: StandardButton.Ok
+    }
+
+    Component {
+        id: transferOwnershipPopup
+        TransferOwnershipPopup {
+            anchors.centerIn: parent
+            store: root.rootStore
+        }
+    }
+
+    Component {
+        id: inviteFriendsToCommunityPopup
+        InviteFriendsToCommunityPopup {
+            anchors.centerIn: parent
+            rootStore: root.rootStore
+            contactsStore: root.rootStore.contactsStore
+            onClosed: {
+                destroy()
+            }
+
+            onSendInvites: {
+                const error = root.communitySectionModule.inviteUsersToCommunity(JSON.stringify(pubKeys))
+                processInviteResult(error)
+            }
+        }
     }
 }

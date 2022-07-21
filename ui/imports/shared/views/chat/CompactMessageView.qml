@@ -27,6 +27,8 @@ Item {
     property var container
     property int contentType
     property bool isChatBlocked: false
+    property bool isActiveChannel: false
+    property int senderTrustStatus
 
     property int chatHorizontalPadding: Style.current.halfPadding
     property int chatVerticalPadding: 7
@@ -40,29 +42,13 @@ Item {
     property string senderIcon: ""
     property bool isHovered: false
     property bool isInPinnedPopup: false
+    property bool pinnedMessage: false
+    property bool canPin: false
     property string communityId
-    property bool showMoreButton: {
-        if(!root.messageStore)
-            return false
-
-        let chatTypeThisMessageBelongsTo = root.messageStore.getChatType()
-        switch (chatTypeThisMessageBelongsTo) {
-        case Constants.chatType.oneToOne:
-            return true
-        case Constants.chatType.privateGroupChat:
-            return messageStore.amIChatAdmin() || amISender
-        case Constants.chatType.publicChat:
-            return amISender
-        case Constants.chatType.communityChat:
-            return messageStore.amIChatAdmin() || amISender || messageStore.pinMessageAllowedForMembers()
-        case Constants.chatType.profile:
-            return false
-        default:
-            return false
-        }
-    }
     property bool editModeOn: false
     property string linkUrls: ""
+
+    property string message: ""
 
     property var transactionParams
 
@@ -87,8 +73,9 @@ Item {
             + (dateGroupLbl.visible ? dateGroupLbl.height + dateGroupLbl.anchors.topMargin : 0)
 
     Connections {
-        target: !!root.messageStore && root.messageStore.messageModule? root.messageStore.messageModule : null
-        enabled: responseTo !== ""
+        target: !!root.messageStore && root.messageStore.messageModule ?
+            root.messageStore.messageModule : null
+        enabled: !!root.messageStore && !!root.messageStore.messageModule && responseTo !== ""
         onRefreshAMessageUserRespondedTo: {
             if(msgId === messageId)
                 chatReply.resetOriginalMessage()
@@ -131,10 +118,37 @@ Item {
         // This is not exactly like the design because the hover becomes messed up with the buttons on top of another Message
         anchors.topMargin: -Style.current.halfPadding
         messageContextMenu: root.messageContextMenu
-        showMoreButton: root.showMoreButton
         isInPinnedPopup: root.isInPinnedPopup
         fromAuthor: senderId
         editBtnActive: isText && !editModeOn && root.amISender
+        pinButtonActive: {
+            if (!root.messageStore)
+                 return false
+
+            const chatType = root.messageStore.getChatType();
+            const amIChatAdmin = root.messageStore.amIChatAdmin();
+            const pinMessageAllowedForMembers = root.messageStore.pinMessageAllowedForMembers()
+
+            return chatType === Constants.chatType.oneToOne ||
+                   chatType === Constants.chatType.privateGroupChat && amIChatAdmin ||
+                   chatType === Constants.chatType.communityChat && (amIChatAdmin || pinMessageAllowedForMembers);
+
+        }
+        deleteButtonActive: {
+            if (!root.messageStore)
+                return false;
+            const isMyMessage = senderId !== "" && senderId === userProfile.pubKey;
+            const chatType = root.messageStore.getChatType();
+            return isMyMessage &&
+                    (contentType === Constants.messageContentType.messageType ||
+                     contentType === Constants.messageContentType.stickerType ||
+                     contentType === Constants.messageContentType.emojiType ||
+                     contentType === Constants.messageContentType.imageType ||
+                     contentType === Constants.messageContentType.audioType);
+        }
+        pinnedMessage: root.pinnedMessage
+        canPin: root.canPin
+
         activityCenterMsg: activityCenterMessage
         placeholderMsg: placeholderMessage
         onClickMessage: {
@@ -213,6 +227,7 @@ Item {
                 + (retry.visible && !chatTime.visible ? Style.current.smallPadding : 0)
                 + (pinnedRectangleLoader.active ? Style.current.smallPadding : 0)
                 + (editModeOn ? 25 : 0)
+                + (!chatName.visible ? 6 : 0)
         width: parent.width
 
         color: {
@@ -268,8 +283,7 @@ Item {
                     }
 
                     StyledText {
-                        //% "Pinned by %1"
-                        text: qsTrId("pinned-by--1").arg(Utils.getContactDetailsAsJson(messagePinnedBy).displayName)
+                        text: qsTr("Pinned by %1").arg(Utils.getContactDetailsAsJson(messagePinnedBy).displayName)
                         anchors.left: pinImage.right
                         anchors.verticalCenter: parent.verticalCenter
                         font.pixelSize: 13
@@ -370,11 +384,21 @@ Item {
             }
         }
 
+        VerificationLabel {
+            id: trustStatus
+            anchors.left: chatName.right
+            anchors.leftMargin: 4
+            anchors.bottom: chatName.bottom
+            anchors.bottomMargin: 4
+            visible: !root.amISender && chatName.visible
+            trustStatus: senderTrustStatus
+        }
+
         ChatTimePanel {
             id: chatTime
             visible: !editModeOn && headerRepeatCondition
             anchors.verticalCenter: chatName.verticalCenter
-            anchors.left: chatName.right
+            anchors.left: trustStatus.right
             anchors.leftMargin: 4
             color: Style.current.secondaryText
             timestamp: messageTimestamp
@@ -407,7 +431,7 @@ Item {
                     store: root.store
                     usersStore: root.usersStore
 
-                    chatInputPlaceholder: qsTrId("type-a-message-")
+                    chatInputPlaceholder: qsTr("Pinned by %1")
                     chatType: messageStore.getChatType()
                     isEdit: true
                     emojiPopup: root.emojiPopup
@@ -440,7 +464,7 @@ Item {
                                 index += 8 // "<a href="
                                 continue
                             }
-                            let addrEndIndex = message.indexOf('"', addrIndex)
+                            let addrEndIndex = message.indexOf("\"", addrIndex)
                             if (addrEndIndex < 0) {
                                 index += 8 // "<a href="
                                 continue
@@ -468,8 +492,7 @@ Item {
                     anchors.left: parent.left
                     anchors.leftMargin: Style.current.halfPadding
                     anchors.top: editTextInput.bottom
-                    //% "Cancel"
-                    text: qsTrId("browsing-cancel")
+                    text: qsTr("Cancel")
                     onClicked: {
                         messageStore.setEditModeOff(messageId)
                         editTextInput.textInput.text = StatusQUtils.Emoji.parse(message)
@@ -482,8 +505,7 @@ Item {
                     anchors.left: cancelBtn.right
                     anchors.leftMargin: Style.current.halfPadding
                     anchors.top: editTextInput.bottom
-                    //% "Save"
-                    text: qsTrId("save")
+                    text: qsTr("Save")
                     enabled: editTextInput.textInput.text.trim().length > 0
                     onClicked: {
                         let msg = rootStore.plainText(StatusQUtils.Emoji.deparse(editTextInput.textInput.text))
@@ -507,12 +529,14 @@ Item {
             anchors.leftMargin: chatImage.imageWidth + Style.current.padding + root.chatHorizontalPadding
             anchors.right: parent.right
             anchors.rightMargin: root.chatHorizontalPadding
+            anchors.topMargin: (!chatName.visible || !chatReply.active  || !pinnedRectangleLoader.active) ? 4 : 0
             visible: !editModeOn
             ChatTextView {
                 id: chatText
                 readonly property int leftPadding: chatImage.anchors.leftMargin + chatImage.width + chatHorizontalPadding
-                visible: isText || isEmoji || isImage
+                visible: isText || isEmoji || (isImage && root.message !== "<p>Update to latest version to see a nice image here!</p>")
 
+                message: Utils.removeGifUrls(root.message)
                 anchors.top: parent.top
                 anchors.topMargin: isEmoji ? 2 : 0
                 anchors.left: parent.left
@@ -540,6 +564,7 @@ Item {
                         playing: root.messageStore.playAnimation
                         imageSource: messageImage
                         imageWidth: 200
+                        isActiveChannel: root.isActiveChannel
                         onClicked: {
                             if (mouse.button === Qt.LeftButton) {
                                 root.imageClicked(image)
@@ -677,6 +702,7 @@ Item {
 
         Retry {
             id: retry
+            height: visible ? implicitHeight : 0
             anchors.left: chatTime.visible ? chatTime.right : messageContent.left
             anchors.leftMargin: chatTime.visible ? chatHorizontalPadding : 0
             anchors.top: chatTime.visible ? chatTime.top : messageContent.bottom
@@ -738,11 +764,14 @@ Item {
                 onAddEmojiClicked: {
                     if(root.isChatBlocked)
                         return
+
+                    // First set parent, X & Y positions for the messageContextMenu
+                    root.messageContextMenu.parent = emojiRect
+                    root.messageContextMenu.setXPosition = function() { return (root.messageContextMenu.parent.x + root.messageContextMenu.parent.width + 4) }
+                    root.messageContextMenu.setYPosition = function() { return  (-root.messageContextMenu.height - 4) }
+
+                    // Second, add emoji that also triggers setXYPosition methods / open popup:
                     root.addEmoji(false, false, false, null, true, false);
-                    // Set parent, X & Y positions for the messageContextMenu
-                    root.messageContextMenu.parent = emojiReactionLoader
-                    root.messageContextMenu.setXPosition = function() { return (root.messageContextMenu.parent.x + 4)}
-                    root.messageContextMenu.setYPosition = function() { return (-root.messageContextMenu.height - 4)}
                 }
 
                 onToggleReaction: {

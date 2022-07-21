@@ -3,7 +3,7 @@ import NimQml, tables, json, sugar, sequtils, strformat, marshal, times
 import io_interface, view, controller, chat_search_item, chat_search_model
 import ephemeral_notification_item, ephemeral_notification_model
 import ./communities/models/[pending_request_item, pending_request_model]
-import ../shared_models/[member_item, member_model, section_item, section_model, active_section]
+import ../shared_models/[user_item, member_item, member_model, section_item, section_model, active_section]
 import ../../global/app_sections_config as conf
 import ../../global/app_signals
 import ../../global/global_singleton
@@ -21,6 +21,7 @@ import activity_center/module as activity_center_module
 import communities/module as communities_module
 import node_section/module as node_section_module
 import networks/module as networks_module
+import ../../../app_service/service/contacts/dto/contacts
 
 import ../../../app_service/service/keychain/service as keychain_service
 import ../../../app_service/service/chat/service as chat_service
@@ -51,6 +52,7 @@ import ../../../app_service/service/gif/service as gif_service
 import ../../../app_service/service/ens/service as ens_service
 import ../../../app_service/service/network/service as network_service
 import ../../../app_service/service/general/service as general_service
+from ../../../app_service/common/types import StatusType
 
 import ../../core/notifications/details
 import ../../core/eventemitter
@@ -147,8 +149,10 @@ proc newModule*[T](
     transactionService, collectible_service, walletAccountService,
     settingsService, savedAddressService, networkService,
   )
-  result.browserSectionModule = browser_section_module.newModule(result, events, bookmarkService, settingsService,
-  dappPermissionsService, providerService, walletAccountService)
+  result.browserSectionModule = browser_section_module.newModule(
+    result, events, bookmarkService, settingsService, networkService,
+    dappPermissionsService, providerService, walletAccountService
+  )
   result.profileSectionModule = profile_section_module.newModule(
     result, events, accountsService, settingsService, stickersService,
     profileService, contactsService, aboutService, languageService, privacyService, nodeConfigurationService,
@@ -199,7 +203,7 @@ proc createChannelGroupItem[T](self: Module[T], c: ChannelGroupDto): SectionItem
   result = initItem(
     c.id,
     if isCommunity: SectionType.Community else: SectionType.Chat,
-    c.name,
+    if isCommunity: c.name else: "Chat",
     c.admin,
     c.description,
     c.introMessage,
@@ -208,11 +212,11 @@ proc createChannelGroupItem[T](self: Module[T], c: ChannelGroupDto): SectionItem
     c.images.banner,
     icon = if (isCommunity): "" else: conf.CHAT_SECTION_ICON,
     c.color,
+    if isCommunity: communityDetails.tags else: "",
     hasNotification,
     notificationsCount,
     active,
-    enabled = (not isCommunity or 
-      singletonInstance.localAccountSensitiveSettings.getCommunitiesEnabled()),
+    enabled = true,
     if (isCommunity): communityDetails.joined else: true,
     if (isCommunity): communityDetails.canJoin else: true,
     c.canManageUsers,
@@ -230,8 +234,8 @@ proc createChannelGroupItem[T](self: Module[T], c: ChannelGroupDto): SectionItem
         localNickname = contactDetails.details.localNickname,
         alias = contactDetails.details.alias,
         icon = contactDetails.icon,
-        onlineStatus = OnlineStatus.Offline,
-        isContact = contactDetails.details.added # FIXME
+        onlineStatus = toOnlineStatus(self.controller.getStatusForContactWithId(member.id).statusType),
+        isContact = contactDetails.details.isContact
         )),
     if (isCommunity): communityDetails.pendingRequestsToJoin.map(x => pending_request_item.initItem(
       x.id,
@@ -300,7 +304,7 @@ method load*[T](
   hasNotification = false,
   notificationsCount = 0,
   active = false,
-  enabled = singletonInstance.localAccountSensitiveSettings.getIsCommunitiesPortalEnabled())
+  enabled = true)
   self.view.model().addItem(communitiesPortalSectionItem)
   if(activeSectionId == communitiesPortalSectionItem.id):
     activeSection = communitiesPortalSectionItem
@@ -528,10 +532,6 @@ proc setSectionAvailability[T](self: Module[T], sectionType: SectionType, availa
     self.view.model().disableSection(sectionType)
 
 method toggleSection*[T](self: Module[T], sectionType: SectionType) =
-  #if (sectionType == SectionType.CommunitiesPortal):
-  #  let enabled = true #singletonInstance.localAccountSensitiveSettings.getIsCommunitiesPortalEnabled()
-  #  self.setSectionAvailability(sectionType, not enabled)
-  #  singletonInstance.localAccountSensitiveSettings.setIsWalletEnabled(not enabled)
   if (sectionType == SectionType.Wallet):
     let enabled = singletonInstance.localAccountSensitiveSettings.getIsWalletEnabled()
     self.setSectionAvailability(sectionType, not enabled)
@@ -540,21 +540,13 @@ method toggleSection*[T](self: Module[T], sectionType: SectionType) =
     let enabled = singletonInstance.localAccountSensitiveSettings.getIsBrowserEnabled()
     self.setSectionAvailability(sectionType, not enabled)
     singletonInstance.localAccountSensitiveSettings.setIsBrowserEnabled(not enabled)
-  elif (sectionType == SectionType.Community):
-    let enabled = singletonInstance.localAccountSensitiveSettings.getCommunitiesEnabled()
-    self.setSectionAvailability(sectionType, not enabled)
-    singletonInstance.localAccountSensitiveSettings.setCommunitiesEnabled(not enabled)
   elif (sectionType == SectionType.NodeManagement):
     let enabled = singletonInstance.localAccountSensitiveSettings.getNodeManagementEnabled()
     self.setSectionAvailability(sectionType, not enabled)
     singletonInstance.localAccountSensitiveSettings.setNodeManagementEnabled(not enabled)
-  elif (sectionType == SectionType.CommunitiesPortal):
-    let enabled = singletonInstance.localAccountSensitiveSettings.getIsCommunitiesPortalEnabled()
-    self.setSectionAvailability(sectionType, not enabled)
-    singletonInstance.localAccountSensitiveSettings.setIsCommunitiesPortalEnabled(not enabled)
 
-method setUserStatus*[T](self: Module[T], status: bool) =
-  self.controller.setUserStatus(status)
+method setCurrentUserStatus*[T](self: Module[T], status: StatusType) =
+  self.controller.setCurrentUserStatus(status)
 
 proc getChatSectionModule*[T](self: Module[T]): chat_section_module.AccessInterface =
   return self.channelGroupModules[singletonInstance.userProfile.getPubKey()]
@@ -593,6 +585,9 @@ method switchTo*[T](self: Module[T], sectionId, chatId: string) =
 
 method onActiveChatChange*[T](self: Module[T], sectionId: string, chatId: string) =
   self.appSearchModule.onActiveChatChange(sectionId, chatId)
+
+method onChatLeft*[T](self: Module[T], chatId: string) =
+  self.appSearchModule.updateSearchLocationIfPointToChatWithId(chatId)
 
 method onNotificationsUpdated[T](self: Module[T], sectionId: string, sectionHasUnreadMessages: bool,
   sectionNotificationCount: int) =
@@ -684,10 +679,10 @@ method communityEdited*[T](
 
 method getContactDetailsAsJson*[T](self: Module[T], publicKey: string): string =
   let contact =  self.controller.getContact(publicKey)
-  let (name, image) = self.controller.getContactNameAndImage(contact.id)
+  let (name, _, _) = self.controller.getContactNameAndImage(contact.id)
   let jsonObj = %* {
     "displayName": name,
-    "displayIcon": image,
+    "displayIcon": contact.image.thumbnail,
     "publicKey": contact.id,
     "name": contact.name,
     "ensVerified": contact.ensVerified,
@@ -695,13 +690,17 @@ method getContactDetailsAsJson*[T](self: Module[T], publicKey: string): string =
     "lastUpdated": contact.lastUpdated,
     "lastUpdatedLocally": contact.lastUpdatedLocally,
     "localNickname": contact.localNickname,
-    "thumbnailImage": contact.image.large,
-    "largeImage": contact.image.thumbnail,
-    "isContact":contact.added,
-    "isBlocked":contact.blocked,
-    "requestReceived":contact.hasAddedUs,
-    "isSyncing":contact.isSyncing,
-    "removed":contact.removed
+    "thumbnailImage": contact.image.thumbnail,
+    "largeImage": contact.image.large,
+    "isContact": contact.isContact,
+    "isBlocked": contact.blocked,
+    "requestReceived": contact.hasAddedUs,
+    "isAdded": contact.isContactRequestSent,
+    "isSyncing": contact.isSyncing,
+    "removed": contact.removed,
+    "trustStatus": contact.trustStatus.int,
+    "verificationStatus": contact.verificationStatus.int,
+    "hasAddedUs": contact.hasAddedUs
   }
   return $jsonObj
 
@@ -712,7 +711,7 @@ method resolveENS*[T](self: Module[T], ensName: string, uuid: string, reason: st
   self.controller.resolveENS(ensName, uuid, reason)
 
 method resolvedENS*[T](self: Module[T], publicKey: string, address: string, uuid: string, reason: string) =
-  if(publicKey.len == 0):
+  if(reason.len > 0 and publicKey.len == 0):
     self.displayEphemeralNotification("Unexisting contact", "Wrong public key or ens name", "", false, EphemeralNotificationType.Default.int, "")
     return
   
@@ -736,6 +735,11 @@ method resolvedENS*[T](self: Module[T], publicKey: string, address: string, uuid
   else:
     self.view.emitResolvedENSSignal(publicKey, address, uuid)
 
+method contactsStatusUpdated*[T](self: Module[T], statusUpdates: seq[StatusUpdateDto]) =
+  for s in statusUpdates:
+    let status = toOnlineStatus(s.statusType)
+    self.view.activeSection().setOnlineStatusForMember(s.publicKey, status)
+
 method contactUpdated*[T](self: Module[T], publicKey: string) =
   let contactDetails = self.controller.getContactDetails(publicKey)
   self.view.activeSection().updateMember(
@@ -745,6 +749,8 @@ method contactUpdated*[T](self: Module[T], publicKey: string) =
     contactDetails.details.localNickname,
     contactDetails.details.alias,
     contactDetails.icon,
+    isContact = contactDetails.details.isContact,
+    isUntrustworthy = contactDetails.details.isContactUntrustworthy(),
     )
 
 method calculateProfileSectionHasNotification*[T](self: Module[T]): bool =
@@ -769,7 +775,7 @@ method osNotificationClicked*[T](self: Module[T], details: NotificationDetails) 
     echo "There is no particular action clicking on a notification informing you about rejection to join community"
 
 method newCommunityMembershipRequestReceived*[T](self: Module[T], membershipRequest: CommunityMembershipRequestDto) =
-  let (contactName, _) = self.controller.getContactNameAndImage(membershipRequest.publicKey)
+  let (contactName, _, _) = self.controller.getContactNameAndImage(membershipRequest.publicKey)
   let community =  self.controller.getCommunityById(membershipRequest.communityId)
   singletonInstance.globalEvents.newCommunityMembershipRequestNotification("New membership request",
   fmt "{contactName} asks to join {community.name}", community.id)
@@ -778,31 +784,42 @@ method meMentionedCountChanged*[T](self: Module[T], allMentions: int) =
   singletonInstance.globalEvents.meMentionedIconBadgeNotification(allMentions)
 
 method displayEphemeralNotification*[T](self: Module[T], title: string, subTitle: string, icon: string, loading: bool, 
-  ephNotifType: int, url: string) =
+  ephNotifType: int, url: string, details = NotificationDetails()) =
   let now = getTime()
   let id = now.toUnix * 1000000000 + now.nanosecond
   var finalEphNotifType = EphemeralNotificationType.Default
   if(ephNotifType == EphemeralNotificationType.Success.int):
     finalEphNotifType = EphemeralNotificationType.Success
   let item = ephemeral_notification_item.initItem(id, title, TOAST_MESSAGE_VISIBILITY_DURATION_IN_MS, subTitle, icon,
-  loading, finalEphNotifType, url)
+  loading, finalEphNotifType, url, details)
   self.view.ephemeralNotificationModel().addItem(item)
 
 method displayEphemeralNotification*[T](self: Module[T], title: string, subTitle: string, details: NotificationDetails) =
   if(details.notificationType == NotificationType.NewMessage or 
     details.notificationType == NotificationType.NewMessageWithPersonalMention or
     details.notificationType == NotificationType.NewMessageWithGlobalMention):
-    self.displayEphemeralNotification(title, subTitle, "", false, EphemeralNotificationType.Default.int, "")
+    self.displayEphemeralNotification(title, subTitle, "", false, EphemeralNotificationType.Default.int, "", details)
   
   elif(details.notificationType == NotificationType.NewContactRequest or 
     details.notificationType == NotificationType.IdentityVerificationRequest):
-    self.displayEphemeralNotification(title, subTitle, "contact", false, EphemeralNotificationType.Default.int, "")
+    self.displayEphemeralNotification(title, subTitle, "contact", false, EphemeralNotificationType.Default.int, "", details)
 
   elif(details.notificationType == NotificationType.AcceptedContactRequest):
-    self.displayEphemeralNotification(title, subTitle, "checkmark-circle", false, EphemeralNotificationType.Success.int, "")
+    self.displayEphemeralNotification(title, subTitle, "checkmark-circle", false, EphemeralNotificationType.Success.int, "", details)
 
 method removeEphemeralNotification*[T](self: Module[T], id: int64) =
   self.view.ephemeralNotificationModel().removeItemWithId(id)
+
+method ephemeralNotificationClicked*[T](self: Module[T], id: int64) =
+  let item = self.view.ephemeralNotificationModel().getItemWithId(id)
+  if(item.details.isEmpty()):
+    return
+  if(item.details.notificationType == NotificationType.NewMessage or 
+    item.details.notificationType == NotificationType.NewMessageWithPersonalMention or
+    item.details.notificationType == NotificationType.NewMessageWithGlobalMention):
+    self.controller.switchTo(item.details.sectionId, item.details.chatId, item.details.messageId)
+  else:
+    self.osNotificationClicked(item.details)
 
 method onStatusUrlRequested*[T](self: Module[T], action: StatusUrlAction, communityId: string, chatId: string, 
   url: string, userId: string, groupName: string, listOfUserIds: seq[string]) =
@@ -834,16 +851,16 @@ method onStatusUrlRequested*[T](self: Module[T], action: StatusUrlAction, commun
       i.inc
       self.resolveENS(id, "", STATUS_URL_ENS_RESOLVE_REASON & $StatusUrlAction.OpenOrCreateGroupChat)
   
-  elif(action == StatusUrlAction.RequestToJoinCommunity and singletonInstance.localAccountSensitiveSettings.getCommunitiesEnabled()):
+  elif(action == StatusUrlAction.RequestToJoinCommunity):
     let item = self.view.model().getItemById(singletonInstance.userProfile.getPubKey())
     self.setActiveSection(item)
     self.communitiesModule.requestToJoinCommunity(communityId, singletonInstance.userProfile.getName())
 
-  elif(action == StatusUrlAction.OpenCommunity and singletonInstance.localAccountSensitiveSettings.getCommunitiesEnabled()):
+  elif(action == StatusUrlAction.OpenCommunity):
     let item = self.view.model().getItemById(communityId)
     self.setActiveSection(item)
 
-  elif(action == StatusUrlAction.OpenCommunityChannel and singletonInstance.localAccountSensitiveSettings.getCommunitiesEnabled()):
+  elif(action == StatusUrlAction.OpenCommunityChannel):
     for cId, cModule in self.channelGroupModules.pairs:
       if(cId == singletonInstance.userProfile.getPubKey()):
         continue

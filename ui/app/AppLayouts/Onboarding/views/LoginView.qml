@@ -97,7 +97,7 @@ Item {
             width: 140
             height: 140
             fillMode: Image.PreserveAspectFit
-            source: Style.svg("status-logo-circle")
+            source: Style.png("status-logo")
             anchors.horizontalCenter: parent.horizontalCenter
         }
 
@@ -226,10 +226,8 @@ Item {
             width: 318
             enabled: !loading
             placeholderText: loading ?
-                //% "Connecting..."
-                qsTrId("connecting") :
-                //% "Enter password"
-                qsTrId("enter-password")
+                qsTr("Connecting...") :
+                qsTr("Password")
             textField.echoMode: TextInput.Password
             Keys.onReturnPressed: {
                 doLogin(textField.text)
@@ -246,8 +244,6 @@ Item {
             height: 40
             type: StatusQControls.StatusRoundButton.Type.Secondary
             icon.name: "arrow-right"
-            icon.width: 18
-            icon.height: 14
             opacity: (loading || txtPassword.text.length > 0) ? 1 : 0
             anchors.left: txtPassword.right
             anchors.leftMargin: (loading || txtPassword.text.length > 0) ? Style.current.padding : Style.current.smallPadding
@@ -279,8 +275,7 @@ Item {
                     if (error === "file is not a database") {
                         errMsg.text = errMsg.incorrectPasswordMsg
                     } else {
-                        //% "Login failed: %1"
-                        errMsg.text = qsTrId("login-failed---1").arg(error.toUpperCase())
+                        errMsg.text = qsTr("Login failed: %1").arg(error.toUpperCase())
                     }
                     errMsg.visible = true
                     loading = false
@@ -291,8 +286,7 @@ Item {
 
         StyledText {
             id: errMsg
-            //% "Login failed. Please re-enter your password and try again."
-            readonly property string incorrectPasswordMsg: qsTrId("login-failed--please-re-enter-your-password-and-try-again-")
+            readonly property string incorrectPasswordMsg: qsTr("Password incorrect")
             anchors.top: txtPassword.bottom
             anchors.topMargin: Style.current.padding
             anchors.horizontalCenter: parent.horizontalCenter

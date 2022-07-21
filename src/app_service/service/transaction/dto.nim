@@ -1,4 +1,4 @@
-import json, strutils, stint
+import json, strutils, stint, json_serialization
 include  ../../common/json_utils
 
 type
@@ -12,6 +12,20 @@ type
 proc event*(self:PendingTransactionTypeDto):string =
   result = "transaction:" & $self
 
+type
+  MultiTransactionType* = enum
+    MultiTransactionSend = 0, MultiTransactionSwap = 1, MultiTransactionBridge = 2
+
+type MultiTransactionDto* = ref object of RootObj
+  id* {.serializedFieldName("id").}: int
+  timestamp* {.serializedFieldName("timestamp").}: int
+  fromAddress* {.serializedFieldName("fromAddress").}: string
+  toAddress* {.serializedFieldName("toAddress").}: string
+  fromAsset* {.serializedFieldName("fromAsset").}: string
+  toAsset* {.serializedFieldName("toAsset").}: string
+  fromAmount* {.serializedFieldName("fromAmount").}: string
+  multiTxtype* {.serializedFieldName("type").}: MultiTransactionType
+  
 type
   TransactionDto* = ref object of RootObj
     id*: string
@@ -29,6 +43,7 @@ type
     value*: string
     fromAddress*: string
     to*: string
+    chainId*: int
 
 proc toTransactionDto*(jsonObj: JsonNode): TransactionDto =
   result = TransactionDto()
@@ -47,6 +62,8 @@ proc toTransactionDto*(jsonObj: JsonNode): TransactionDto =
   discard jsonObj.getProp("value", result.value)
   discard jsonObj.getProp("from", result.fromAddress)
   discard jsonObj.getProp("to", result.to)
+  discard jsonObj.getProp("networkId", result.chainId)
+
 
 proc cmpTransactions*(x, y: TransactionDto): int =
   # Sort proc to compare transactions from a single account.

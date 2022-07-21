@@ -14,11 +14,12 @@ import shared.panels 1.0
 import shared.status 1.0
 import shared.views 1.0
 import shared.controls.chat 1.0
+import shared.controls.chat.menuItems 1.0
 
 StatusListItem {
     id: container
     width: parent.width
-    visible: container.isMutualContact && (container.searchStr == "" || container.name.includes(container.searchStr))
+    visible: container.isContact && (container.searchStr == "" || container.name.includes(container.searchStr))
     height: visible ? implicitHeight : 0
     title: container.name
     image.source: container.icon
@@ -26,10 +27,11 @@ StatusListItem {
     property string name: "Jotaro Kujo"
     property string publicKey: "0x04d8c07dd137bd1b73a6f51df148b4f77ddaa11209d36e43d8344c0a7d6db1cad6085f27cfb75dd3ae21d86ceffebe4cf8a35b9ce8d26baa19dc264efe6d8f221b"
     property string icon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
-    property bool isMutualContact: false
+    property bool isContact: false
     property bool isBlocked: false
     property bool isVerified: false
     property bool isUntrustworthy: false
+    property int verificationRequestStatus: 0
 
     property string searchStr: ""
 
@@ -43,12 +45,24 @@ StatusListItem {
     signal openProfilePopup(string publicKey)
     signal openChangeNicknamePopup(string publicKey)
     signal sendMessageActionTriggered(string publicKey)
+    signal showVerificationRequest(string publicKey)
     signal contactRequestAccepted(string publicKey)
     signal contactRequestRejected(string publicKey)
     signal rejectionRemoved(string publicKey)
     signal textClicked(string publicKey)
 
     components: [
+        StatusFlatButton {
+            visible: verificationRequestStatus === Constants.verificationStatus.verifying ||
+                verificationRequestStatus === Constants.verificationStatus.verified
+            width: visible ? implicitWidth : 0
+            height: visible ? implicitHeight : 0
+            text: verificationRequestStatus === Constants.verificationStatus.verifying ?
+                qsTr("Respond to ID Request") :
+                qsTr("See ID Request")
+            size: StatusBaseButton.Size.Small
+            onClicked: container.showVerificationRequest(container.publicKey)
+        },
         StatusFlatRoundButton {
             visible: showSendMessageButton
             width: visible ? 32 : 0
@@ -128,9 +142,7 @@ StatusListItem {
 
                 Separator {}
 
-                StatusMenuItem {
-                    text: qsTr("View Profile")
-                    icon.name: "profile"
+                ViewProfileMenuItem {
                     icon.width: 16
                     icon.height: 16
                     onTriggered: {
@@ -139,16 +151,14 @@ StatusListItem {
                     }
                 }
 
-                StatusMenuItem {
-                    text: qsTr("Send message")
-                    icon.name: "chat"
+                SendMessageMenuItem {
                     icon.width: 16
                     icon.height: 16
                     onTriggered: {
                         container.sendMessageActionTriggered(container.publicKey)
                         menuButton.highlighted = false
                     }
-                    enabled: container.isMutualContact
+                    enabled: container.isContact
                 }
 
                 StatusMenuItem {

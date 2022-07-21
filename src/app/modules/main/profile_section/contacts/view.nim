@@ -33,8 +33,8 @@ QtObject:
     # Temporary commented until we provide appropriate flags on the `status-go` side to cover all sections.
     # self.receivedButRejectedContactRequestsModel.delete
     # self.receivedButRejectedContactRequestsModelVariant.delete
-    # self.sentButRejectedContactRequestsModel.delete
     # self.sentButRejectedContactRequestsModelVariant.delete
+    # self.sentButRejectedContactRequestsModel.delete
     self.QObject.delete
 
   proc newView*(delegate: io_interface.AccessInterface): View =
@@ -123,14 +123,23 @@ QtObject:
   proc isMyMutualContact*(self: View, publicKey: string): bool {.slot.} =
     return self.myMutualContactsModel.isContactWithIdAdded(publicKey)
 
-  proc addContact*(self: View, publicKey: string) {.slot.} =
-    self.delegate.addContact(publicKey)
+  proc isBlockedContact*(self: View, publicKey: string): bool {.slot.} =
+    return self.blockedContactsModel.isContactWithIdAdded(publicKey)
+
+  proc hasPendingContactRequest*(self: View, publicKey: string): bool {.slot.} =
+    return self.sentContactRequestsModel.isContactWithIdAdded(publicKey)
+
+  proc sendContactRequest*(self: View, publicKey: string, message: string) {.slot.} =
+    self.delegate.sendContactRequest(publicKey, message)
 
   proc switchToOrCreateOneToOneChat*(self: View, publicKey: string) {.slot.} =
     self.delegate.switchToOrCreateOneToOneChat(publicKey)
 
-  proc rejectContactRequest*(self: View, publicKey: string) {.slot.} =
-    self.delegate.rejectContactRequest(publicKey)
+  proc acceptContactRequest*(self: View, publicKey: string) {.slot.} =
+    self.delegate.acceptContactRequest(publicKey)
+
+  proc dismissContactRequest*(self: View, publicKey: string) {.slot.} =
+    self.delegate.dismissContactRequest(publicKey)
 
   proc changeContactNickname*(self: View, publicKey: string, nickname: string) {.slot.} =
     self.delegate.changeContactNickname(publicKey, nickname)
@@ -144,5 +153,37 @@ QtObject:
   proc removeContact*(self: View, publicKey: string) {.slot.} =
     self.delegate.removeContact(publicKey)
 
+  proc markUntrustworthy*(self: View, publicKey: string) {.slot.} =
+    self.delegate.markUntrustworthy(publicKey)
+
+  proc removeTrustStatus*(self: View, publicKey: string) {.slot.} =
+    self.delegate.removeTrustStatus(publicKey)
+
   proc removeContactRequestRejection*(self: View, publicKey: string) {.slot.} =
     self.delegate.removeContactRequestRejection(publicKey)
+  proc getSentVerificationDetailsAsJson(self: View, publicKey: string): string {.slot.} =
+    return self.delegate.getSentVerificationDetailsAsJson(publicKey)
+
+  proc getVerificationDetailsFromAsJson(self: View, publicKey: string): string {.slot.} =
+    return self.delegate.getVerificationDetailsFromAsJson(publicKey)
+
+  proc sendVerificationRequest*(self: View, publicKey: string, challenge: string) {.slot.} =
+    self.delegate.sendVerificationRequest(publicKey, challenge)
+
+  proc cancelVerificationRequest*(self: View, publicKey: string) {.slot.} =
+    self.delegate.cancelVerificationRequest(publicKey)
+
+  proc verifiedTrusted*(self: View, publicKey: string) {.slot.} =
+    self.delegate.verifiedTrusted(publicKey)
+
+  proc verifiedUntrustworthy*(self: View, publicKey: string) {.slot.} =
+    self.delegate.verifiedUntrustworthy(publicKey)
+
+  proc declineVerificationRequest*(self: View, publicKey: string) {.slot.} =
+    self.delegate.declineVerificationRequest(publicKey)
+
+  proc acceptVerificationRequest*(self: View, publicKey: string, response: string) {.slot.} =
+    self.delegate.acceptVerificationRequest(publicKey, response)
+
+  proc hasReceivedVerificationRequestFrom*(self: View, fromId: string): bool {.slot.} =
+    result = self.delegate.hasReceivedVerificationRequestFrom(fromId)

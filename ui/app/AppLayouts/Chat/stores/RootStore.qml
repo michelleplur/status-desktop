@@ -6,6 +6,8 @@ import StatusQ.Core.Utils 0.1 as StatusQUtils
 QtObject {
     id: root
 
+    property string locale: localAppSettings.locale
+
     property var contactsStore
 
     property bool openCreateChat: false
@@ -16,6 +18,8 @@ QtObject {
     property string createChatStickerHashId: ""
     property string createChatStickerPackId: ""
 
+    property var groupInfoPopupComponent
+    property var membershipRequestPopup
     property var contactsModel: root.contactsStore.myContactsModel
 
     // Important:
@@ -62,12 +66,12 @@ QtObject {
         chatCommunitySectionModule.acceptAllContactRequests()
     }
 
-    function rejectContactRequest(pubKey) {
-        chatCommunitySectionModule.rejectContactRequest(pubKey)
+    function dismissContactRequest(pubKey) {
+        chatCommunitySectionModule.dismissContactRequest(pubKey)
     }
 
-    function rejectAllContactRequests() {
-        chatCommunitySectionModule.rejectAllContactRequests()
+    function dismissAllContactRequests() {
+        chatCommunitySectionModule.dismissAllContactRequests()
     }
 
     function blockContact(pubKey) {
@@ -138,19 +142,7 @@ QtObject {
 
     property bool isCommunityHistoryArchiveSupportEnabled: advancedModule? advancedModule.isCommunityHistoryArchiveSupportEnabled : false
 
-    function reCalculateAddToGroupContacts(channel) {
-        const contacts = getContactListObject()
-
-        if (channel) {
-            contacts.forEach(function (contact) {
-                if(channel.contains(contact.pubKey) ||
-                        !contact.isContact) {
-                    return;
-                }
-                addToGroupContacts.append(contact)
-            })
-        }
-    }
+    property string communityTags: communitiesModule.tags
 
     property var stickersModuleInst: stickersModule
 
@@ -234,6 +226,7 @@ QtObject {
                                 introMessage: "",
                                 outroMessage: "",
                                 color: "",
+                                tags: "",
                                 image: {
                                     src: "",
                                     AX: 0,
@@ -248,7 +241,8 @@ QtObject {
                                 }
                              }) {
         return communitiesModuleInst.createCommunity(
-                    args.name, args.description, args.introMessage, args.outroMessage, args.options.checkedMembership, args.color,
+                    args.name, args.description, args.introMessage, args.outroMessage,
+                    args.options.checkedMembership, args.color, args.tags,
                     args.image.src, args.image.AX, args.image.AY, args.image.BX, args.image.BY,
                     args.options.historyArchiveSupportEnabled, args.options.pinMessagesAllowedForMembers);
     }
@@ -337,8 +331,8 @@ QtObject {
         chatCommunitySectionModule.reorderCommunityChat(categoryId, chatId, to)
     }
 
-    function joinCommunity(id) {
-        return communitiesModuleInst.joinCommunity(id)
+    function joinCommunity(id, ensName) {
+        return communitiesModuleInst.joinCommunity(id, ensName)
     }
 
     function requestToJoinCommunity(id, ensName) {
@@ -379,8 +373,7 @@ QtObject {
         }
         if (index > -1) {
             const pk = link.substring(index + 3)
-            //% "Start a 1-on-1 chat with %1"
-            result.title = qsTrId("start-a-1-on-1-chat-with--1")
+            result.title = qsTr("Start a 1-on-1 chat with %1")
                             .arg(isChatKey(pk) ? globalUtils.generateAlias(pk) : ("@" + removeStatusEns(pk)))
             result.callback = function () {
                 if (isChatKey(pk)) {
@@ -408,8 +401,7 @@ QtObject {
                 return result
             }
 
-            //% "Join the %1 community"
-            result.title = qsTrId("join-the--1-community").arg(communityName)
+            result.title = qsTr("Join the %1 community").arg(communityName)
             result.communityId = communityId
             result.callback = function () {
                 const isUserMemberOfCommunity = isUserMemberOfCommunity(communityId)
@@ -421,7 +413,7 @@ QtObject {
                 const userCanJoin = userCanJoin(communityId)
                 // TODO find what to do when you can't join
                 if (userCanJoin) {
-                    joinCommunity(communityId, true)
+                    joinCommunity(communityId, userProfileInst.ensName)
                 }
             }
             return result
@@ -436,8 +428,7 @@ QtObject {
             const pubKey = link.substring(indexAdminPk + 2, indexChatName - 1)
             const chatName = link.substring(indexChatName + 3, indexChatId - 1)
             const chatId = link.substring(indexChatId + 3, link.length)
-            //% "Join the %1 group chat"
-            result.title = qsTrId("join-the--1-group-chat").arg(chatName)
+            result.title = qsTr("Join the %1 group chat").arg(chatName)
             result.callback = function () {
                 // Not Refactored Yet
 //                chatsModel.groups.joinGroupChatFromInvitation(chatName, chatId, pubKey);
@@ -452,8 +443,7 @@ QtObject {
 //        index = link.lastIndexOf("/")
 //        if (index > -1) {
 //            const chatId = link.substring(index + 1)
-//            //% "Join the %1 public channel"
-//            result.title = qsTrId("join-the--1-public-channel").arg(chatId)
+//            result.title = qsTr("Join the %1 public channel").arg(chatId)
 //            result.callback = function () {
 //                chatsModel.channelView.joinPublicChat(chatId);
 //            }
@@ -485,6 +475,36 @@ QtObject {
 
     function getPubkey() {
         return userProfile.getPubKey()
+    }
+
+    property var allNetworks: networksModule.all
+
+    property var disabledChainIds: []
+
+    function addRemoveDisabledChain(suggestedRoutes, chainID, isDisbaled) {
+        if(isDisbaled) {
+            for(var i = 0; i < suggestedRoutes.length;i++) {
+                if(suggestedRoutes[i].chainId === chainID) {
+                    disabledChainIds.push(suggestedRoutes[i].chainId)
+                }
+            }
+        }
+        else {
+            for(var i = 0; i < disabledChainIds.length;i++) {
+                if(disabledChainIds[i] === chainID) {
+                    disabledChainIds.splice(i, 1)
+                }
+            }
+        }
+    }
+
+    function checkIfDisabledByUser(chainID) {
+        for(var i = 0; i < disabledChainIds.length;i++) {
+            if(disabledChainIds[i] === chainID) {
+                return true
+            }
+        }
+        return false
     }
 
     function getFiatValue(balance, cryptoSymbo, fiatSymbol) {
@@ -540,7 +560,7 @@ QtObject {
         return JSON.parse(walletSectionTransactions.suggestedFees(chainId))
     }
 
-    function suggestedRoutes(account, amount, token) {
-        return JSON.parse(walletSectionTransactions.suggestedRoutes(account, amount, token)).networks
+    function suggestedRoutes(account, amount, token, disabledChainIds) {
+        return JSON.parse(walletSectionTransactions.suggestedRoutes(account, amount, token, disabledChainIds)).networks
     }
 }

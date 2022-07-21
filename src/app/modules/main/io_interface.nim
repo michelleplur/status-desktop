@@ -7,12 +7,12 @@ import ../../../app_service/service/community/service as community_service
 import ../../../app_service/service/message/service as message_service
 import ../../../app_service/service/gif/service as gif_service
 import ../../../app_service/service/mailservers/service as mailservers_service
+from ../../../app_service/common/types import StatusType
 
 import ../../global/app_signals
 import ../../core/eventemitter
 import ../../core/notifications/details
 import ../shared_models/section_item
-import chat_search_item
 
 type
   AccessInterface* {.pure inheritable.} = ref object of RootObj
@@ -120,6 +120,9 @@ method communityLeft*(self: AccessInterface, communityId: string) {.base.} =
 method resolvedENS*(self: AccessInterface, publicKey: string, address: string, uuid: string, reason: string) {.base.} =
   raise newException(ValueError, "No implementation available")
 
+method contactsStatusUpdated*(self: AccessInterface, statusUpdates: seq[StatusUpdateDto]) {.base.} =
+  raise newException(ValueError, "No implementation available")
+
 method contactUpdated*(self: AccessInterface, publicKey: string) {.base.} =
   raise newException(ValueError, "No implementation available")
 
@@ -134,10 +137,13 @@ method displayEphemeralNotification*(self: AccessInterface, title: string, subTi
   raise newException(ValueError, "No implementation available")
 
 method displayEphemeralNotification*(self: AccessInterface, title: string, subTitle: string, icon: string, loading: bool, 
-    ephNotifType: int, url: string) {.base.} =
+    ephNotifType: int, url: string, details = NotificationDetails()) {.base.} =
   raise newException(ValueError, "No implementation available")
 
 method removeEphemeralNotification*(self: AccessInterface, id: int64) {.base.} =
+  raise newException(ValueError, "No implementation available")
+
+method ephemeralNotificationClicked*(self: AccessInterface, id: int64) {.base.} =
   raise newException(ValueError, "No implementation available")
 
 method newCommunityMembershipRequestReceived*(self: AccessInterface, membershipRequest: CommunityMembershipRequestDto)
@@ -162,7 +168,10 @@ method storePassword*(self: AccessInterface, password: string) {.base.} =
 method setActiveSection*(self: AccessInterface, item: SectionItem) {.base.} =
   raise newException(ValueError, "No implementation available")
 
-method setUserStatus*(self: AccessInterface, status: bool) {.base.} =
+method onChatLeft*(self: AccessInterface, chatId: string) =
+  raise newException(ValueError, "No implementation available")
+
+method setCurrentUserStatus*(self: AccessInterface, status: StatusType) {.base.} =
   raise newException(ValueError, "No implementation available")
 
 method getChatSectionModuleAsVariant*(self: AccessInterface): QVariant {.base.} =

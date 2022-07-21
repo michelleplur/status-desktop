@@ -1,5 +1,6 @@
 import Tables
-
+import NimQml
+import json
 import io_interface
 
 import ../../../../../app_service/service/settings/service as settings_service
@@ -12,6 +13,7 @@ import ../../../../../app_service/service/wallet_account/service as wallet_accou
 
 import ../../../../core/signals/types
 import ../../../../core/eventemitter
+import ../../../shared_models/message_item
 
 
 type
@@ -27,6 +29,9 @@ type
     chatService: chat_service.Service
     communityService: community_service.Service
     messageService: message_service.Service
+
+# Forward declaration
+proc getChatDetails*(self: Controller): ChatDto
 
 proc newController*(delegate: io_interface.AccessInterface, events: EventEmitter, sectionId: string, chatId: string,
   belongsToCommunity: bool, isUsersListAvailable: bool, settingsService: settings_service.Service,
@@ -101,9 +106,45 @@ proc init*(self: Controller) =
     var args = ContactArgs(e)
     self.delegate.onContactDetailsUpdated(args.contactId)
 
+  self.events.on(SIGNAL_CONTACT_UNTRUSTWORTHY) do(e: Args):
+    var args = TrustArgs(e)
+    self.delegate.onContactDetailsUpdated(args.publicKey)
+
+  self.events.on(SIGNAL_CONTACT_TRUSTED) do(e: Args):
+    var args = TrustArgs(e)
+    self.delegate.onContactDetailsUpdated(args.publicKey)
+
+  self.events.on(SIGNAL_REMOVED_TRUST_STATUS) do(e: Args):
+    var args = TrustArgs(e)
+    self.delegate.onContactDetailsUpdated(args.publicKey)
+
   self.events.on(SIGNAL_CONTACT_UPDATED) do(e: Args):
     var args = ContactArgs(e)
     self.delegate.onContactDetailsUpdated(args.contactId)
+    if (args.contactId == self.chatId):
+      self.delegate.onMutualContactChanged()
+
+  let chatDto = self.getChatDetails()
+  if(chatDto.chatType == ChatType.OneToOne):
+    self.events.on(SIGNAL_CONTACT_ADDED) do(e: Args):
+      var args = ContactArgs(e)
+      if (args.contactId == self.chatId):
+        self.delegate.onMutualContactChanged()
+
+    self.events.on(SIGNAL_CONTACT_REMOVED) do(e: Args):
+      var args = ContactArgs(e)
+      if (args.contactId == self.chatId):
+        self.delegate.onMutualContactChanged()
+
+    self.events.on(SIGNAL_CONTACT_BLOCKED) do(e: Args):
+      var args = ContactArgs(e)
+      if (args.contactId == self.chatId):
+        self.delegate.onMutualContactChanged()
+
+    self.events.on(SIGNAL_CONTACT_UNBLOCKED) do(e: Args):
+      var args = ContactArgs(e)
+      if (args.contactId == self.chatId):
+        self.delegate.onMutualContactChanged()
 
   self.events.on(SIGNAL_MESSAGE_DELETION) do(e: Args):
     let args = MessageDeletedArgs(e)
@@ -125,7 +166,7 @@ proc init*(self: Controller) =
     self.delegate.onChatRenamed(args.newName)
 
   self.events.on(SIGNAL_CHAT_UPDATE) do(e: Args):
-    var args = ChatUpdateArgsNew(e)
+    var args = ChatUpdateArgs(e)
     for chat in args.chats:
       if self.chatId == chat.id:
         self.delegate.onChatEdited(chat)
@@ -139,7 +180,7 @@ proc getChatDetails*(self: Controller): ChatDto =
 proc getCommunityDetails*(self: Controller): CommunityDto =
   return self.communityService.getCommunityById(self.sectionId)
 
-proc getOneToOneChatNameAndImage*(self: Controller): tuple[name: string, image: string] =
+proc getOneToOneChatNameAndImage*(self: Controller): tuple[name: string, image: string, largeImage: string] =
   return self.chatService.getOneToOneChatNameAndImage(self.chatId)
 
 proc belongsToCommunity*(self: Controller): bool =
@@ -196,3 +237,13 @@ proc getTransactionDetails*(self: Controller, message: MessageDto): (string,stri
 
 proc getWalletAccounts*(self: Controller): seq[wallet_account_service.WalletAccountDto] =
   return self.messageService.getWalletAccounts()
+
+proc downloadMessages*(self: Controller, messages: seq[message_item.Item], filePath: string) =
+  let data = newJArray()
+  for message in messages:
+    data.elems.add(%*{
+      "id": message.id(), "text": message.messageText(), "timestamp": message.timestamp(),
+      "sender": message.senderDisplayName()
+    })
+
+  writeFile(url_toLocalFile(filePath), $data) 

@@ -21,7 +21,6 @@ Item {
     property var rootStore
     property var contactsStore
     property var community
-    property var communityModule
 
     property string validationError: ""
     property string successMessage: ""
@@ -55,8 +54,7 @@ Item {
             pubKey = ""
             ensUsername = "";
         } else if (RootStore.userProfileInst.pubKey === chatKey.text) {
-            //% "Can't chat with yourself"
-            root.validationError = qsTrId("can-t-chat-with-yourself");
+            root.validationError = qsTr("Can't chat with yourself");
         } else {
             root.validationError = "";
         }
@@ -67,8 +65,7 @@ Item {
         id: chatKey
         property bool hasValidSearchResult: false
 
-        //% "Enter ENS username or chat key"
-        placeholderText: qsTrId("enter-contact-code")
+        placeholderText: qsTr("Enter ENS username or chat key")
         visible: showSearch
         height: visible ? implicitHeight : 0
         Keys.onReleased: {
@@ -115,11 +112,10 @@ Item {
                     ensUsername.text = "";
                     searchResults.pubKey = pubKey = "";
                     searchResults.address = "";
-                    searchResults.showProfileNotFoundMessage = true
+                    searchResults.showProfileNotFoundMessage = root.showContactList
                 } else {
                     if (userProfile.pubKey === resolvedPubKey) {
-                        //% "Can't chat with yourself"
-                        root.validationError = qsTrId("can-t-chat-with-yourself");
+                        root.validationError = qsTr("Can't chat with yourself");
                     } else {
                         chatKey.hasValidSearchResult = true
                         searchResults.username = Utils.addStatusEns(chatKey.text.trim())
@@ -182,7 +178,6 @@ Item {
 
         contactsStore: root.contactsStore
         community: root.community
-        communityModule: root.communityModule
         visible: showContactList
         hideCommunityMembers: root.hideCommunityMembers
         anchors.topMargin: this.height > 0 ? Style.current.halfPadding : 0
@@ -211,7 +206,7 @@ Item {
             root.pubKeys = pubKeysCopy
 
             chatKey.hasValidSearchResult = false
-            userClicked(contact.pubKey, contact.isContact, contact.name, contact.address)
+            userClicked(contact.pubKey, contact.isContact, contact.alias, contact.address)
         }
         expanded: !searchResults.loading && pubKey === "" && !searchResults.showProfileNotFoundMessage
     }

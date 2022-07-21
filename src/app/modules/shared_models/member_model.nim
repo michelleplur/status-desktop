@@ -2,6 +2,7 @@ import NimQml, Tables, strformat, sequtils, sugar
 
 # TODO: use generics to remove duplication between user_model and member_model
 
+import ../../../app_service/service/contacts/dto/contacts
 import member_item
 
 type
@@ -20,8 +21,8 @@ type
     IsUntrustworthy
     IsBlocked
     ContactRequest
-    IncomingVerification
-    OutcomingVerification
+    IncomingVerificationStatus
+    OutgoingVerificationStatus
     IsAdmin
     Joined
 
@@ -81,8 +82,8 @@ QtObject:
       ModelRole.IsUntrustworthy.int: "isUntrustworthy",
       ModelRole.IsBlocked.int: "isBlocked",
       ModelRole.ContactRequest.int: "contactRequest",
-      ModelRole.IncomingVerification.int: "incomingVerification",
-      ModelRole.OutcomingVerification.int: "outcomingVerification",
+      ModelRole.IncomingVerificationStatus.int: "incomingVerificationStatus",
+      ModelRole.OutgoingVerificationStatus.int: "outgoingVerificationStatus",
       ModelRole.IsAdmin.int: "isAdmin",
       ModelRole.Joined.int: "joined",
     }.toTable
@@ -126,10 +127,10 @@ QtObject:
       result = newQVariant(item.isBlocked)
     of ModelRole.ContactRequest:
       result = newQVariant(item.contactRequest.int)
-    of ModelRole.IncomingVerification:
-      result = newQVariant(item.incomingVerification.int)
-    of ModelRole.OutcomingVerification:
-      result = newQVariant(item.outcomingVerification.int)
+    of ModelRole.IncomingVerificationStatus:
+      result = newQVariant(item.incomingVerificationStatus.int)
+    of ModelRole.OutgoingVerificationStatus:
+      result = newQVariant(item.outgoingVerificationStatus.int)
     of ModelRole.IsAdmin:
       result = newQVariant(item.isAdmin)
     of ModelRole.Joined:
@@ -141,7 +142,7 @@ QtObject:
     # if we add an item with offline status we add it as the first offline item (after the last online item)
     var position = -1
     for i in 0 ..< self.items.len:
-      if(self.items[i].onlineStatus == OnlineStatus.Offline):
+      if(self.items[i].onlineStatus == OnlineStatus.Inactive):
         position = i
         break
 
@@ -202,7 +203,6 @@ QtObject:
     let index = self.createIndex(ind, 0, nil)
     self.dataChanged(index, index, @[ModelRole.Icon.int])
 
-# FIXME: remove defaults
   proc updateItem*(
       self: Model,
       pubKey: string,
@@ -211,9 +211,10 @@ QtObject:
       localNickname: string,
       alias: string,
       icon: string,
-      isContact: bool = false,
-      isAdmin: bool = false,
-      joined: bool = false
+      isContact: bool,
+      isAdmin: bool,
+      joined: bool,
+      isUntrustworthy: bool,
       ) =
     let ind = self.findIndexForMessageId(pubKey)
     if(ind == -1):
@@ -227,6 +228,7 @@ QtObject:
     self.items[ind].isContact = isContact
     self.items[ind].isAdmin = isAdmin
     self.items[ind].joined = joined
+    self.items[ind].isUntrustworthy = isUntrustworthy
 
     let index = self.createIndex(ind, 0, nil)
     self.dataChanged(index, index, @[
@@ -238,6 +240,41 @@ QtObject:
       ModelRole.IsContact.int,
       ModelRole.IsAdmin.int,
       ModelRole.Joined.int,
+      ModelRole.IsUntrustworthy.int,
+    ])
+
+  proc updateItem*(
+      self: Model,
+      pubKey: string,
+      displayName: string,
+      ensName: string,
+      localNickname: string,
+      alias: string,
+      icon: string,
+      isContact: bool,
+      isUntrustworthy: bool,
+      ) =
+    let ind = self.findIndexForMessageId(pubKey)
+    if(ind == -1):
+      return
+
+    self.items[ind].displayName = displayName
+    self.items[ind].ensName = ensName
+    self.items[ind].localNickname = localNickname
+    self.items[ind].alias = alias
+    self.items[ind].icon = icon
+    self.items[ind].isContact = isContact
+    self.items[ind].isUntrustworthy = isUntrustworthy
+
+    let index = self.createIndex(ind, 0, nil)
+    self.dataChanged(index, index, @[
+      ModelRole.DisplayName.int,
+      ModelRole.EnsName.int,
+      ModelRole.LocalNickname.int,
+      ModelRole.Alias.int,
+      ModelRole.Icon.int,
+      ModelRole.IsContact.int,
+      ModelRole.IsUntrustworthy.int,
     ])
 
   proc setOnlineStatus*(self: Model, pubKey: string,

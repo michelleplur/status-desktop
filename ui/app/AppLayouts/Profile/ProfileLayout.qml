@@ -4,6 +4,7 @@ import QtQuick.Layouts 1.13
 
 import utils 1.0
 import shared 1.0
+import shared.panels 1.0
 
 import "stores"
 import "popups"
@@ -27,7 +28,7 @@ StatusAppTwoPanelLayout {
     QtObject {
         id: d
 
-        readonly property int topMargin: 0
+        readonly property int topMargin: secureYourSeedPhrase.visible ? secureYourSeedPhrase.height : 0
         readonly property int bottomMargin: 56
         readonly property int leftMargin: 48
         readonly property int rightMargin: 48
@@ -39,6 +40,13 @@ StatusAppTwoPanelLayout {
         id: leftTab
         store: profileView.store
         anchors.fill: parent
+        anchors.topMargin: d.topMargin
+        onMenuItemClicked: {
+            if (profileContainer.currentItem.dirty) {
+                event.accepted = true;
+                profileContainer.currentItem.notifyDirty();
+            }
+        }
     }
 
     rightPanel: Item {
@@ -63,6 +71,8 @@ StatusAppTwoPanelLayout {
         StackLayout {
             id: profileContainer
 
+            readonly property var currentItem: (currentIndex >= 0 && currentIndex < children.length) ? children[currentIndex] : null
+
             anchors.top: banner.visible? banner.bottom : parent.top
             anchors.left: parent.left
             anchors.right: parent.right
@@ -81,22 +91,22 @@ StatusAppTwoPanelLayout {
             }
 
             MyProfileView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                implicitWidth: parent.width
+                implicitHeight: parent.height
 
+                walletStore: profileView.store.walletStore
                 profileStore: profileView.store.profileStore
+                privacyStore: profileView.store.privacyStore
                 sectionTitle: profileView.store.getNameForSubsection(Constants.settingsSubsection.profile)
                 contentWidth: d.contentWidth
             }
 
             ContactsView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-
+                implicitWidth: parent.width
+                implicitHeight: parent.height
                 contactsStore: profileView.store.contactsStore
                 sectionTitle: qsTr("Contacts")
                 contentWidth: d.contentWidth
-
                 backButtonName: profileView.store.getNameForSubsection(Constants.settingsSubsection.messaging)
 
                 onBackButtonClicked: {
@@ -109,8 +119,8 @@ StatusAppTwoPanelLayout {
                 // TODO: handle structure for this subsection to match style used in onther sections
                 // using `SettingsContentBase` component as base.
                 id: ensContainer
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                implicitWidth: parent.width
+                implicitHeight: parent.height
 
                 ensUsernamesStore: profileView.store.ensUsernamesStore
                 contactsStore: profileView.store.contactsStore
@@ -120,17 +130,18 @@ StatusAppTwoPanelLayout {
             }
 
             MessagingView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                implicitWidth: parent.width
+                implicitHeight: parent.height
 
                 messagingStore: profileView.store.messagingStore
                 sectionTitle: profileView.store.getNameForSubsection(Constants.settingsSubsection.messaging)
+                contactsStore: profileView.store.contactsStore
                 contentWidth: d.contentWidth
             }
 
             WalletView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                implicitWidth: parent.width
+                implicitHeight: parent.height
 
                 walletStore: profileView.store.walletStore
                 emojiPopup: profileView.emojiPopup
@@ -138,18 +149,9 @@ StatusAppTwoPanelLayout {
                 contentWidth: d.contentWidth
             }
 
-            PrivacyView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-
-                privacyStore: profileView.store.privacyStore
-                sectionTitle: profileView.store.getNameForSubsection(Constants.settingsSubsection.privacyAndSecurity)
-                contentWidth: d.contentWidth
-            }
-
             AppearanceView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                implicitWidth: parent.width
+                implicitHeight: parent.height
 
                 appearanceStore: profileView.store.appearanceStore
                 sectionTitle: profileView.store.getNameForSubsection(Constants.settingsSubsection.appearance)
@@ -158,8 +160,8 @@ StatusAppTwoPanelLayout {
             }
 
             LanguageView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                implicitWidth: parent.width
+                implicitHeight: parent.height
 
                 languageStore: profileView.store.languageStore
                 currencyStore: profileView.store.walletStore.currencyStore
@@ -168,8 +170,8 @@ StatusAppTwoPanelLayout {
             }
 
             NotificationsView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                implicitWidth: parent.width
+                implicitHeight: parent.height
 
                 notificationsStore: profileView.store.notificationsStore
                 devicesStore: profileView.store.devicesStore
@@ -178,8 +180,8 @@ StatusAppTwoPanelLayout {
             }
 
             DevicesView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                implicitWidth: parent.width
+                implicitHeight: parent.height
 
                 devicesStore: profileView.store.devicesStore
                 sectionTitle: profileView.store.getNameForSubsection(Constants.settingsSubsection.devicesSettings)
@@ -187,8 +189,8 @@ StatusAppTwoPanelLayout {
             }
 
             BrowserView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                implicitWidth: parent.width
+                implicitHeight: parent.height
 
                 store: profileView.store
                 sectionTitle: profileView.store.getNameForSubsection(Constants.settingsSubsection.browserSettings)
@@ -196,8 +198,8 @@ StatusAppTwoPanelLayout {
             }
 
             AdvancedView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                implicitWidth: parent.width
+                implicitHeight: parent.height
 
                 advancedStore: profileView.store.advancedStore
                 sectionTitle: profileView.store.getNameForSubsection(Constants.settingsSubsection.advanced)
@@ -205,8 +207,8 @@ StatusAppTwoPanelLayout {
             }
 
             AboutView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                implicitWidth: parent.width
+                implicitHeight: parent.height
 
                 store: profileView.store
                 globalStore: profileView.globalStore
@@ -215,8 +217,8 @@ StatusAppTwoPanelLayout {
             }
 
             CommunitiesView {
-                Layout.fillWidth: true
-                Layout.fillHeight: true
+                implicitWidth: parent.width
+                implicitHeight: parent.height
 
                 profileSectionStore: profileView.store
                 rootStore: profileView.globalStore
@@ -225,5 +227,31 @@ StatusAppTwoPanelLayout {
                 contentWidth: d.contentWidth
             }
         }
+    } // Item
+    ModuleWarning {
+        id: secureYourSeedPhrase
+        width: parent.width
+        visible: {
+          if (profileContainer.currentIndex !== Constants.settingsSubsection.profile) {
+            return false
+          }
+          if (profileView.store.profileStore.userDeclinedBackupBanner) {
+            return false
+          }
+          return !profileView.store.profileStore.privacyStore.mnemonicBackedUp
+        }
+        color: Style.current.red
+        btnWidth: 100
+        text: qsTr("Secure your seed phrase")
+        btnText: qsTr("Back up now")
+
+        onClick: function(){
+            Global.openBackUpSeedPopup();
+        }
+
+        onClosed: {
+            profileView.store.profileStore.userDeclinedBackupBanner = true
+        }
+
     }
-}
+} // StatusAppTwoPanelLayout

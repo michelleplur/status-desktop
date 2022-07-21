@@ -15,17 +15,19 @@ Item {
     width: parent.width
     height: 64
 
+    property bool hasMentions: false
+    property bool hasReplies: false
+    property bool hideReadNotifications: false
     property bool allBtnHighlighted: false
     property bool repliesBtnHighlighted: false
     property bool mentionsBtnHighlighted: false
-    property alias repliesBtnEnabled: repliesbtn.enabled
-    property alias mentionsBtnEnabled: mentionsBtn.enabled
     property alias errorText: errorText.text
     signal allBtnClicked()
     signal repliesBtnClicked()
     signal mentionsBtnClicked()
     signal preferencesClicked()
     signal markAllReadClicked()
+    signal hideReadNotificationsTriggered()
 
     Row {
         id: filterButtons
@@ -37,8 +39,7 @@ Item {
 
        StatusFlatButton {
            id: allBtn
-           //% "All"
-           text: qsTrId("all")
+           text: qsTr("All")
            size: StatusBaseButton.Size.Small
            highlighted: root.allBtnHighlighted
            onClicked: root.allBtnClicked();
@@ -46,8 +47,7 @@ Item {
 
        StatusFlatButton {
            id: mentionsBtn
-           //% "Mentions"
-           text: qsTrId("mentions")
+           text: qsTr("Mentions")
            enabled: hasMentions
            size: StatusBaseButton.Size.Small
            highlighted: root.mentionsBtnHighlighted
@@ -58,8 +58,7 @@ Item {
 
        StatusFlatButton {
            id: repliesbtn
-           //% "Replies"
-           text: qsTrId("replies")
+           text: qsTr("Replies")
            enabled: hasReplies
            size: StatusBaseButton.Size.Small
            highlighted: root.repliesBtnHighlighted
@@ -71,7 +70,7 @@ Item {
 //       StatusFlatButton {
 //           id: contactRequestsBtn
 //           //% "Contact requests"
-//           text: qsTrId("contact-requests")
+//           text: qsTr("Replies")
 //           enabled: hasContactRequests
 //           size: StatusBaseButton.Size.Small
 //           highlighted: activityCenter.currentFilter === ActivityCenter.Filter.ContactRequests
@@ -96,8 +95,7 @@ Item {
 
             StatusToolTip {
               visible: markAllReadBtn.hovered
-              //% "Mark all as Read"
-              text: qsTrId("mark-all-as-read")
+              text: qsTr("Mark all as Read")
             }
         }
 
@@ -118,17 +116,14 @@ Item {
                 StatusMenuItem {
                     icon.name: "hide"
                     text: hideReadNotifications ?
-                              //% "Show read notifications"
-                              qsTrId("show-read-notifications") :
-                              //% "Hide read notifications"
-                              qsTrId("hide-read-notifications")
+                              qsTr("Show read notifications") :
+                              qsTr("Hide read notifications")
                     onTriggered: hideReadNotifications = !hideReadNotifications
                 }
 
                 StatusMenuItem {
                     icon.name: "notification"
-                    //% "Notification settings"
-                    text: qsTrId("chat-notification-preferences")
+                    text: qsTr("Notification settings")
                     onTriggered: {
                         root.preferencesClicked();
                     }

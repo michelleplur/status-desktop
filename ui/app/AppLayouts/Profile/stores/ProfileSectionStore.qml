@@ -62,8 +62,6 @@ QtObject {
 
     property bool browserMenuItemEnabled: localAccountSensitiveSettings.isBrowserEnabled
     property bool walletMenuItemEnabled: localAccountSensitiveSettings.isWalletEnabled
-    property bool appsMenuItemsEnabled: localAccountSensitiveSettings.isWalletEnabled || localAccountSensitiveSettings.communitiesEnabled
-    property bool communitiesMenuItemEnabled: localAccountSensitiveSettings.communitiesEnabled
 
     property var communitiesModuleInst: communitiesModule
     property var communitiesList: communitiesModuleInst.model
@@ -102,9 +100,6 @@ QtObject {
 
     property ListModel settingsMenuItems: ListModel {
         Component.onCompleted: {
-            append({subsection: Constants.settingsSubsection.privacyAndSecurity,
-                       text: qsTr("Privacy and security"),
-                       icon: "security"})
             append({subsection: Constants.settingsSubsection.appearance,
                        text: qsTr("Appearance"),
                        icon: "appearance"})

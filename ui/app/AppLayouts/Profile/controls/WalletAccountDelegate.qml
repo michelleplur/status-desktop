@@ -4,9 +4,12 @@ import StatusQ.Core 0.1
 
 
 StatusListItem {
-    signal goToAccountView()
-
+    id: root
+    
     property var account
+    property bool showShevronIcon: true
+
+    signal goToAccountView()
     
     title: account.name
     subTitle: account.address
@@ -15,17 +18,20 @@ StatusListItem {
     icon.name: !account.emoji ? "filled-account": ""
     icon.letterSize: 14
     icon.isLetterIdenticon: !!account.emoji
-    icon.background.color: Theme.palette.indirectColor1
+    icon.background.color: Theme.palette.primaryColor3
     width: parent.width
-    components: [
-        StatusIcon {
-            icon: "chevron-down"
-            rotation: 270
-            color: Theme.palette.baseColor1
-        }
-    ]
+    
+    components: !showShevronIcon ? [] : [ shevronIcon ]
 
     onClicked: {
         goToAccountView()
+    }
+
+    StatusIcon {
+        id: shevronIcon
+        visible: root.showShevronIcon
+        icon: "chevron-down"
+        rotation: 270
+        color: Theme.palette.baseColor1
     }
 }
