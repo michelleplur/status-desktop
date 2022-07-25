@@ -74,6 +74,28 @@ pipeline {
       } }
     }
   }
+  post {
+    failure { script {
+      withCredentials([
+        string(
+          credentialsId: 'discord-status-desktop-webhook',
+          variable: 'DISCORD_WEBHOOK'
+        ),
+      ]) {
+        discordSend(
+          title: "${env.JOB_NAME}#${env.BUILD_NUMBER}",
+          description: """
+            CI Desktop build Failure!
+            Branch: `${GIT_BRANCH}`
+            Commit: `${GIT_COMMIT.take(8)}`
+          """,
+          link: env.BUILD_URL,
+          result: currentBuild.currentResult,
+          webhookURL: 'https://discord.com/api/webhooks/1001147901159940146/irrmzHsCDtgYXAg8Y4Svjt802GRKLHTLTxCFOyUnLIb3_vtVho0BEQQddVEQjm3JuVwE'
+        )
+      }
+    } }
+  }
 }
 
 /* Helper that makes PUBLISH default to 'false' unless:
