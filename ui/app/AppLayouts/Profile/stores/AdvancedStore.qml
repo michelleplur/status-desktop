@@ -15,6 +15,7 @@ QtObject {
     property bool isAutoMessageEnabled: advancedModule? advancedModule.isAutoMessageEnabled : false
     property bool isDebugEnabled: advancedModule? advancedModule.isDebugEnabled : false
     property bool isCommunityHistoryArchiveSupportEnabled: advancedModule? advancedModule.isCommunityHistoryArchiveSupportEnabled : false
+    property bool isWakuV2StoreEnabled: advancedModule ? advancedModule.isWakuV2StoreEnabled : false
 
     property var customNetworksModel: advancedModule? advancedModule.customNetworksModel : []
 
@@ -33,6 +34,7 @@ QtObject {
         readonly property string gifWidget: "gifWidget"
         readonly property string keycard: "keycard"
         readonly property string communityHistoryArchiveSupport: "communityHistoryArchiveSupport"
+        readonly property string wakuV2StoreEnabled: "wakuV2StoreEnabled"
         readonly property string communitiesPortal: "communitiesPortal"
     }
 
@@ -118,6 +120,10 @@ QtObject {
         else if (feature === experimentalFeatures.communityHistoryArchiveSupport) {
           // toggle history archive support
           advancedModule.toggleCommunityHistoryArchiveSupport()
+        }
+        else if (feature === experimentalFeatures.wakuV2StoreEnabled) {
+          // toggle history archive support
+          advancedModule.toggleWakuV2Store()
         }
         else if (feature === experimentalFeatures.activityCenter) {
             localAccountSensitiveSettings.isActivityCenterEnabled = !localAccountSensitiveSettings.isActivityCenterEnabled

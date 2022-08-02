@@ -24,6 +24,9 @@ method onBloomLevelSet*(self: AccessInterface) {.base.} =
 method onCommunityHistoryArchiveSupportToggled*(self: AccessInterface) {.base.} =
   raise newException(ValueError, "No implementation available")
 
+method onWakuV2StoreToggled*(self: AccessInterface) {.base.} =
+  raise newException(ValueError, "No implementation available")
+
 method onWakuV2LightClientSet*(self: AccessInterface) {.base.} =
   raise newException(ValueError, "No implementation available")
 
@@ -100,4 +103,10 @@ method isCommunityHistoryArchiveSupportEnabled*(self: AccessInterface): bool {.b
   raise newException(ValueError, "No implementation available")
 
 method toggleCommunityHistoryArchiveSupport*(self: AccessInterface) {.base.} =
+  raise newException(ValueError, "No implementation available")
+
+method isWakuV2StoreEnabled*(self: AccessInterface): bool {.base.} =
+  raise newException(ValueError, "No implementation available")
+
+method toggleWakuV2Store*(self: AccessInterface) {.base.} =
   raise newException(ValueError, "No implementation available")

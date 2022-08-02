@@ -76,6 +76,25 @@ method toggleCommunityHistoryArchiveSupport*(self: Controller) =
 method isCommunityHistoryArchiveSupportEnabled*(self: Controller): bool =
   return self.nodeConfigurationService.isCommunityHistoryArchiveSupportEnabled()
 
+method toggleWakuV2Store*(self: Controller) =
+  let enabled = self.nodeConfigurationService.isWakuV2StoreEnabled()
+
+  if enabled:
+    if (not  self.nodeConfigurationService.setWakuV2StoreEnabled(false)):
+      # in the future we may do a call from here to show a popup about this error
+      error "an error occurred, we couldn't enable community history archive support"
+      return
+  else:
+    if (not  self.nodeConfigurationService.setWakuV2StoreEnabled(true)):
+      # in the future we may do a call from here to show a popup about this error
+      error "an error occurred, we couldn't enable wakuv2 store"
+      return
+
+  self.delegate.onWakuV2StoreToggled()
+
+method isWakuV2StoreEnabled*(self: Controller): bool =
+  return self.nodeConfigurationService.isWakuV2StoreEnabled()
+
 proc getWakuV2LightClientEnabled*(self: Controller): bool =
   return self.nodeConfigurationService.getV2LightMode()
 
