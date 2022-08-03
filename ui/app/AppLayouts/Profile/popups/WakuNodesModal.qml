@@ -38,16 +38,10 @@ StatusModal {
 
         Column {
             id: nodesColumn
-            anchors.left: parent.left
-            anchors.leftMargin: Style.current.padding
-            anchors.right: parent.right
-            anchors.rightMargin: Style.current.padding
+            width: parent.width
 
             StatusListItem {
-                anchors.left: parent.left
-                anchors.leftMargin: -Style.current.padding
-                anchors.right: parent.right
-                anchors.rightMargin: -Style.current.padding
+                width: parent.width
                 title: qsTr("Use Waku nodes")
                 components: [
                     StatusSwitch {
@@ -61,17 +55,11 @@ StatusModal {
             }
 
             Separator {
-                anchors.left: parent.left
-                anchors.leftMargin: -Style.current.padding
-                anchors.right: parent.right
-                anchors.rightMargin: -Style.current.padding
+               width: parent.width
             }
 
             StatusListItem {
-                anchors.left: parent.left
-                anchors.leftMargin: -Style.current.padding
-                anchors.right: parent.right
-                anchors.rightMargin: -Style.current.padding
+                width: parent.width
                 title: qsTr("Select node automatically")
                 components: [
                     StatusSwitch {
@@ -127,7 +115,7 @@ StatusModal {
             StatusBaseText {
                 text: qsTr("Add a new node")
                 color: Theme.palette.primaryColor1
-
+                width: parent.width
                 MouseArea {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
