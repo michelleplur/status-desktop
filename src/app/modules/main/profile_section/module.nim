@@ -30,6 +30,7 @@ import ./about/module as about_module
 import ./advanced/module as advanced_module
 import ./devices/module as devices_module
 import ./sync/module as sync_module
+import ./waku/module as waku_module
 import ./notifications/module as notifications_module
 import ./ens_usernames/module as ens_usernames_module
 import ./communities/module as communities_module
@@ -52,6 +53,7 @@ type
     advancedModule: advanced_module.AccessInterface
     devicesModule: devices_module.AccessInterface
     syncModule: sync_module.AccessInterface
+    wakuModule: waku_module.AccessInterface
     notificationsModule: notifications_module.AccessInterface
     ensUsernamesModule: ens_usernames_module.AccessInterface
     communitiesModule: communities_module.AccessInterface
@@ -91,6 +93,7 @@ proc newModule*(delegate: delegate_interface.AccessInterface,
   result.advancedModule = advanced_module.newModule(result, events, settingsService, stickersService, nodeConfigurationService)
   result.devicesModule = devices_module.newModule(result, events, settingsService, devicesService)
   result.syncModule = sync_module.newModule(result, events, settingsService, mailserversService)
+  result.wakuModule = waku_module.newModule(result, events, settingsService, nodeConfigurationService)
   result.notificationsModule = notifications_module.newModule(result, events, settingsService, chatService, contactsService)
   result.ensUsernamesModule = ens_usernames_module.newModule(
     result, events, settingsService, ensService, walletAccountService, networkService
@@ -108,6 +111,7 @@ method delete*(self: Module) =
   self.advancedModule.delete
   self.devicesModule.delete
   self.syncModule.delete
+  self.wakuModule.delete
   self.communitiesModule.delete
 
   self.view.delete
@@ -124,6 +128,7 @@ method load*(self: Module) =
   self.advancedModule.load()
   self.devicesModule.load()
   self.syncModule.load()
+  self.wakuModule.load()
   self.notificationsModule.load()
   self.ensUsernamesModule.load()
   self.communitiesModule.load()
@@ -154,6 +159,9 @@ proc checkIfModuleDidLoad(self: Module) =
     return
 
   if(not self.syncModule.isLoaded()):
+    return
+
+  if(not self.wakuModule.isLoaded()):
     return
 
   if(not self.notificationsModule.isLoaded()):
@@ -213,8 +221,14 @@ method getDevicesModule*(self: Module): QVariant =
 method syncModuleDidLoad*(self: Module) =
   self.checkIfModuleDidLoad()
 
+method wakuModuleDidLoad*(self: Module) =
+  self.checkIfModuleDidLoad()
+
 method getSyncModule*(self: Module): QVariant =
   self.syncModule.getModuleAsVariant()
+
+method getWakuModule*(self: Module): QVariant =
+  self.wakuModule.getModuleAsVariant()
 
 method notificationsModuleDidLoad*(self: Module) =
   self.checkIfModuleDidLoad()

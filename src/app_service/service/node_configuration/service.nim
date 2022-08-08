@@ -21,6 +21,7 @@ type
     configuration: NodeConfigDto
     fleetConfiguration: FleetConfiguration
     settingsService: settings_service.Service
+    wakuNodes: seq[string]
 
 proc delete*(self: Service) =
   discard
@@ -29,6 +30,7 @@ proc newService*(fleetConfiguration: FleetConfiguration, settingsService: settin
   result = Service()
   result.fleetConfiguration = fleetConfiguration
   result.settingsService = settingsService
+  result.wakuNodes = @[]
 
 proc adaptNodeSettingsForTheAppNeed(self: Service) =
   self.configuration.DataDir = "./ethereum"
@@ -40,6 +42,10 @@ proc init*(self: Service) =
   try:
     let response = status_node_config.getNodeConfig()
     self.configuration = response.result.toNodeConfigDto()
+
+    let wakuNodes = self.configuration.ClusterConfig.WakuNodes
+    for nodeAddress in wakuNodes:
+      self.wakuNodes.add(nodeAddress)
 
     self.adaptNodeSettingsForTheAppNeed()
   except Exception as e:
@@ -176,6 +182,15 @@ proc setBloomLevel*(self: Service, bloomLevel: string): bool =
 
   return false
 
+proc getAllWakuNodes*(self: Service): seq[string] =
+  return self.wakuNodes
+
+proc saveNewWakuNode*(self: Service, nodeAddress: string) =
+  var newConfiguration = self.configuration
+  newConfiguration.ClusterConfig.WakuNodes.add(nodeAddress)
+  self.configuration = newConfiguration
+  discard self.saveConfiguration(newConfiguration)
+
 proc setFleet*(self: Service, fleet: string): bool =
   if(not self.settingsService.saveFleet(fleet)):
     error "error saving fleet ", procName="setFleet"
@@ -192,20 +207,11 @@ proc setFleet*(self: Service, fleet: string): bool =
   var wakuVersion = 2
   case fleetType:
     of Fleet.WakuV2Prod:
-      newConfiguration.ClusterConfig.RelayNodes = @["enrtree://ANTL4SLG2COUILKAPE7EF2BYNL2SHSHVCHLRD5J7ZJLN5R3PRJD2Y@prod.waku.nodes.status.im"]
-      newConfiguration.ClusterConfig.StoreNodes = @["enrtree://ANTL4SLG2COUILKAPE7EF2BYNL2SHSHVCHLRD5J7ZJLN5R3PRJD2Y@prod.waku.nodes.status.im"]
-      newConfiguration.ClusterConfig.FilterNodes = @["enrtree://ANTL4SLG2COUILKAPE7EF2BYNL2SHSHVCHLRD5J7ZJLN5R3PRJD2Y@prod.waku.nodes.status.im"]
-      newConfiguration.ClusterConfig.LightpushNodes = @["enrtree://ANTL4SLG2COUILKAPE7EF2BYNL2SHSHVCHLRD5J7ZJLN5R3PRJD2Y@prod.waku.nodes.status.im"]
+      newConfiguration.ClusterConfig.WakuNodes = @["enrtree://ANTL4SLG2COUILKAPE7EF2BYNL2SHSHVCHLRD5J7ZJLN5R3PRJD2Y@prod.waku.nodes.status.im"]
     of Fleet.WakuV2Test:
-      newConfiguration.ClusterConfig.RelayNodes = @["enrtree://AOFTICU2XWDULNLZGRMQS4RIZPAZEHYMV4FYHAPW563HNRAOERP7C@test.waku.nodes.status.im"]
-      newConfiguration.ClusterConfig.StoreNodes = @["enrtree://AOFTICU2XWDULNLZGRMQS4RIZPAZEHYMV4FYHAPW563HNRAOERP7C@test.waku.nodes.status.im"]
-      newConfiguration.ClusterConfig.FilterNodes = @["enrtree://AOFTICU2XWDULNLZGRMQS4RIZPAZEHYMV4FYHAPW563HNRAOERP7C@test.waku.nodes.status.im"]
-      newConfiguration.ClusterConfig.LightpushNodes = @["enrtree://AOFTICU2XWDULNLZGRMQS4RIZPAZEHYMV4FYHAPW563HNRAOERP7C@test.waku.nodes.status.im"]
+      newConfiguration.ClusterConfig.WakuNodes = @["enrtree://AOFTICU2XWDULNLZGRMQS4RIZPAZEHYMV4FYHAPW563HNRAOERP7C@test.waku.nodes.status.im"]
     of Fleet.StatusTest, Fleet.StatusProd:
-      newConfiguration.ClusterConfig.RelayNodes = self.fleetConfiguration.getNodes(fleetType, FleetNodes.TCP_P2P_Waku)
-      newConfiguration.ClusterConfig.StoreNodes = self.fleetConfiguration.getNodes(fleetType, FleetNodes.TCP_P2P_Waku)
-      newConfiguration.ClusterConfig.FilterNodes = self.fleetConfiguration.getNodes(fleetType, FleetNodes.TCP_P2P_Waku)
-      newConfiguration.ClusterConfig.LightpushNodes = self.fleetConfiguration.getNodes(fleetType, FleetNodes.TCP_P2P_Waku)
+      newConfiguration.ClusterConfig.WakuNodes = self.fleetConfiguration.getNodes(fleetType, FleetNodes.TCP_P2P_Waku)
     else:
       wakuVersion = 1
 

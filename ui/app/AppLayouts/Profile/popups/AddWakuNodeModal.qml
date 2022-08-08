@@ -25,8 +25,7 @@ StatusModal {
     }
 
     onOpened: {
-        nameInput.text = "";
-        enodeInput.text = "";
+        addrInput.text = "";
     }
     
     contentItem: StatusScrollView {
@@ -38,29 +37,18 @@ StatusModal {
             width: parent.width
 
             StatusInput {
-                id: nameInput
-                label: qsTr("Name")
-                placeholderText: qsTr("Specify a name")
+                id: addrInput
+                label: qsTr("Node multiaddress or DNS Discovery address")
+                placeholderText:  "/ipv4/0.0.0.0/tcp/123/..."
                 validators: [StatusMinLengthValidator {
                     minLength: 1
-                    errorMessage: qsTr("You need to enter a name")
-                }]
-                validationMode: StatusInput.ValidationMode.OnlyWhenDirty
-            }
-
-            StatusInput {
-                id: enodeInput
-                label: qsTr("History node address")
-                placeholderText:  "enode://{enode-id}:{password}@{ip-address}:{port-number}"
-                validators: [StatusMinLengthValidator {
-                    minLength: 1
-                    errorMessage: qsTr("You need to enter the enode address")
+                    errorMessage: qsTr("You need to enter a value")
                 },
                 StatusRegularExpressionValidator {
-                    errorMessage: qsTr("The format must be: enode://{enode-id}:{password}@{ip-address}:{port}")
-                    regularExpression: /enode:\/\/[a-z0-9]+:[a-z0-9]+@(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}:[0-9]+/
+                    errorMessage: qsTr("Value should start with '/' or 'enr:'")
+                    regularExpression: /(\/|enr:).+/
                 }]
-                validationMode: StatusInput.ValidationMode.OnlyWhenDirty
+                validationMode: StatusInput.ValidationMode.Always
             }
         }
     }
@@ -68,10 +56,9 @@ StatusModal {
     rightButtons: [
        StatusButton {
             text: qsTr("Save")
-            enabled: nameInput.valid && enodeInput.valid
-            // enabled: nameInput.text !== "" && enodeInput.text !== ""
+            enabled: addrInput.valid
             onClicked: {
-                root.messagingStore.saveNewMailserver(nameInput.text, enodeInput.text)
+                root.messagingStore.saveNewWakuNode(addrInput.text)
                 popup.close()
             }
         }

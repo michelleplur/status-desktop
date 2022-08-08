@@ -25,8 +25,6 @@ StatusModal {
     header.title: qsTr("Waku nodes")
 
     property var messagingStore
-    property string nameValidationError: ""
-    property string enodeValidationError: ""
 
     onClosed: {
         destroy()
@@ -40,74 +38,16 @@ StatusModal {
             id: nodesColumn
             width: parent.width
 
-            StatusListItem {
-                width: parent.width
-                title: qsTr("Use Waku nodes")
-                components: [
-                    StatusSwitch {
-                        checked: root.messagingStore.useMailservers
-                        onCheckedChanged: root.messagingStore.toggleUseMailservers(checked)
-                    }
-                ]
-                sensor.onClicked: {
-                    root.messagingStore.toggleUseMailservers(!root.messagingStore.useMailservers)
-                }
-            }
-
-            Separator {
-               width: parent.width
-            }
-
-            StatusListItem {
-                width: parent.width
-                title: qsTr("Select node automatically")
-                components: [
-                    StatusSwitch {
-                        id: automaticSelectionSwitch
-                        checked: root.messagingStore.automaticMailserverSelection
-                        onCheckedChanged: root.messagingStore.enableAutomaticMailserverSelection(checked)
-                    }
-                ]
-                sensor.onClicked: {
-                    automaticSelectionSwitch.checked = !automaticSelectionSwitch.checked
-                }
-            }
-
-            StatusSectionHeadline {
-                text: qsTr("Waku Nodes")
-                visible: !automaticSelectionSwitch.checked
-                width: parent.width
-                height: visible ? implicitHeight : 0
-            }
-
-            ButtonGroup {
-                id: nodesButtonGroup
-            }
-
             Repeater {
-                id: mailServersListView
-                model: root.messagingStore.mailservers
+                id: wakunodesListView
+                model: root.messagingStore.wakunodes
                 delegate: Component {
                     StatusListItem {
-                        title: qsTr("Node %1").arg(index)
-                        subTitle: model.name
-                        visible: !automaticSelectionSwitch.checked
-                        height: visible ? implicitHeight : 0
+                        title: qsTr("Node %1").arg(index + 1)
+                        subTitle: model.nodeAddress
                         components: [
-                            StatusRadioButton {
-                                id: nodeRadioBtn
-                                ButtonGroup.group: nodesButtonGroup
-                                checked: model.nodeAddress === root.messagingStore.activeMailserver
-                                onCheckedChanged: {
-                                     if (checked) {
-                                        root.messagingStore.setActiveMailserver(model.nodeAddress)
-                                    }
-                                }
-                            }
+                            // TODO: add a button to delete nodes
                         ]
-                        sensor.onClicked: {
-                            nodeRadioBtn.checked = true
-                        }
                     }
                 }
             }

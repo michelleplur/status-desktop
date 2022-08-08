@@ -6,11 +6,13 @@ QtObject {
 
     property var privacyModule
     property var syncModule
+    property var wakuModule
 
     property int profilePicturesVisibility: privacyModule.profilePicturesVisibility
     property int profilePicturesShowTo: privacyModule.profilePicturesShowTo
 
     property var mailservers: syncModule.model
+    property var wakunodes: wakuModule.model
 
     property bool useMailservers: syncModule.useMailservers
 
@@ -32,6 +34,10 @@ QtObject {
 
     function saveNewMailserver(name, nodeAddress) {
         root.syncModule.saveNewMailserver(name, nodeAddress)
+    }
+
+    function saveNewWakuNode(nodeAddress) {
+        root.wakuModule.saveNewWakuNode(nodeAddress)
     }
 
     function enableAutomaticMailserverSelection(checked) {
