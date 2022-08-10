@@ -58,7 +58,7 @@ proc decodeContentHash*(value: string): string =
     let resultTyped = Cid.init(CIDv0, MultiCodec.codec(codec), multiHash).get()
     let base32Hash = Multibase.encode("base32", resultTyped.data.buffer)
     if base32Hash.isOk():
-      result = "https://" & base32Hash.get() & ".ipfs.infura-ipfs.io" # TODO: eventually this will not be needed, since messages will return the decoded content hash
+      result = "https://cloudflare-ipfs.com/ipfs/" & base32Hash.get() # TODO: eventually this will not be needed, since messages will return the decoded content hash
 
     trace "Decoded sticker hash", cid=result
   except Exception as e:
