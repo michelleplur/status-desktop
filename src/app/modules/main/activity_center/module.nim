@@ -4,6 +4,8 @@ import ./io_interface, ./view, ./controller
 import ../io_interface as delegate_interface
 import ./item as notification_item
 import ../../shared_models/message_item as msg_item
+import ../../shared_models/discord_message_item
+import ../../shared_models/discord_message_author_item
 import ../../shared_models/message_item_qobject as msg_item_qobj
 import ../../shared_models/message_transaction_parameters_item
 import ../../../global/global_singleton
@@ -93,8 +95,15 @@ proc createMessageItemFromDto(self: Module, message: MessageDto, chatDetails: Ch
     message.links,
     newTransactionParametersItem("","","","","","",-1,""),
     message.mentionedUsersPks,
-    contactDetails.details.trustStatus
-    ))
+    contactDetails.details.trustStatus,
+    newDiscordMessageItem("","","","","", 
+                          newDiscordMessageAuthorItem(
+                            message.discordMessage.author.id,
+                            message.discordMessage.author.name,
+                            message.discordMessage.author.discriminator,
+                            message.discordMessage.author.nickname,
+                            message.discordMessage.author.avatarUrl
+                          ))))
 
 method convertToItems*(
   self: Module,

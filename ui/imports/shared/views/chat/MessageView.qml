@@ -155,7 +155,7 @@ Loader {
     property bool isAudio: contentType === Constants.messageContentType.audioType
     property bool isStatusMessage: contentType === Constants.messageContentType.systemMessagePrivateGroupType
     property bool isSticker: contentType === Constants.messageContentType.stickerType
-    property bool isText: contentType === Constants.messageContentType.messageType || contentType === Constants.messageContentType.editType
+    property bool isText: contentType === Constants.messageContentType.messageType || contentType === Constants.messageContentType.editType || contentType === Constants.messageContentType.discordMessageType
     property bool isMessage: isEmoji || isImage || isSticker || isText || isAudio
                              || contentType === Constants.messageContentType.communityInviteType || contentType === Constants.messageContentType.transactionType
 

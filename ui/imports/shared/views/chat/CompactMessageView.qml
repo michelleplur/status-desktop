@@ -33,8 +33,9 @@ Item {
 
     property int chatHorizontalPadding: Style.current.halfPadding
     property int chatVerticalPadding: 7
-    property bool headerRepeatCondition: (authorCurrentMsg !== authorPrevMsg ||
-                                          shouldRepeatHeader || dateGroupLbl.visible || chatReply.active)
+    // property bool headerRepeatCondition: (authorCurrentMsg !== authorPrevMsg ||
+    //                                       shouldRepeatHeader || dateGroupLbl.visible || chatReply.active)
+    property bool headerRepeatCondition: true
     property bool stickersLoaded: false
     property string sticker
     property int stickerPack

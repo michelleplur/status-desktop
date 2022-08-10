@@ -170,6 +170,7 @@ proc init*(self: Controller) =
     self.events.on(SIGNAL_RELOAD_MESSAGES) do(e: Args):
       let args = ReloadMessagesArgs(e)
       if (args.communityId == self.sectionId):
+        echo "RELOADING MESSAGES!"
         self.messageService.asyncLoadInitialMessagesForChat(self.getActiveChatId())
     
     self.events.on(SIGNAL_CATEGORY_MUTED) do(e: Args):

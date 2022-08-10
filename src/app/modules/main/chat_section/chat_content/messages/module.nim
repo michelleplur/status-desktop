@@ -2,6 +2,8 @@ import NimQml, chronicles
 import io_interface
 import ../io_interface as delegate_interface
 import view, controller
+import ../../../../shared_models/discord_message_item
+import ../../../../shared_models/discord_message_author_item
 import ../../../../shared_models/message_model
 import ../../../../shared_models/message_item
 import ../../../../shared_models/message_reaction_item
@@ -94,7 +96,8 @@ proc createFetchMoreMessagesItem(self: Module): Item =
     @[],
     newTransactionParametersItem("","","","","","",-1,""),
     @[],
-    TrustStatus.Unknown
+    TrustStatus.Unknown,
+    newDiscordMessageItem("", "", "", "", "", newDiscordMessageAuthorItem("", "", "", "", ""))
   )
 
 proc createChatIdentifierItem(self: Module): Item =
@@ -131,7 +134,8 @@ proc createChatIdentifierItem(self: Module): Item =
     @[],
     newTransactionParametersItem("","","","","","",-1,""),
     @[],
-    TrustStatus.Unknown
+    TrustStatus.Unknown,
+    newDiscordMessageItem("","","","","", newDiscordMessageAuthorItem("", "", "", "", ""))
   )
 
 proc checkIfMessageLoadedAndScrollToItIfItIs(self: Module): bool =
@@ -180,7 +184,7 @@ method newMessagesLoaded*(self: Module, messages: seq[MessageDto], reactions: se
         sender.displayName,
         sender.details.localNickname,
         sender.icon,
-        isCurrentUser,
+        (isCurrentUser and m.contentType.ContentType != ContentType.DiscordMessage),
         sender.details.added,
         m.outgoingStatus,
         renderedMessageText,
@@ -203,7 +207,19 @@ method newMessagesLoaded*(self: Module, messages: seq[MessageDto], reactions: se
           m.transactionParameters.signature),
         m.mentionedUsersPks(),
         sender.details.trustStatus,
-        )
+        newDiscordMessageItem(m.discordMessage.id,
+                              m.discordMessage.type,
+                              m.discordMessage.timestamp,
+                              m.discordMessage.timestampEdited,
+                              m.discordMessage.content,
+                              newDiscordMessageAuthorItem(
+                                m.discordMessage.author.id,
+                                m.discordMessage.author.name,
+                                m.discordMessage.author.discriminator,
+                                m.discordMessage.author.nickname,
+                                m.discordMessage.author.avatarUrl,
+                              ))
+      )
 
       for r in reactions:
         if(r.messageId == m.id):
@@ -268,7 +284,7 @@ method messageAdded*(self: Module, message: MessageDto) =
     sender.displayName,
     sender.details.localNickname,
     sender.icon,
-    isCurrentUser,
+    (isCurrentUser and message.contentType.ContentType != ContentType.DiscordMessage),
     sender.details.added,
     message.outgoingStatus,
     renderedMessageText,
@@ -291,6 +307,18 @@ method messageAdded*(self: Module, message: MessageDto) =
                     message.transactionParameters.signature),
     message.mentionedUsersPks,
     sender.details.trustStatus,
+    newDiscordMessageItem(message.discordMessage.id,
+                          message.discordMessage.type,
+                          message.discordMessage.timestamp,
+                          message.discordMessage.timestampEdited,
+                          message.discordMessage.content,
+                          newDiscordMessageAuthorItem(
+                            message.discordMessage.author.id, 
+                            message.discordMessage.author.name, 
+                            message.discordMessage.author.discriminator, 
+                            message.discordMessage.author.nickname, 
+                            message.discordMessage.author.avatarUrl
+                          ))
   )
 
   self.view.model().insertItemBasedOnTimestamp(item)

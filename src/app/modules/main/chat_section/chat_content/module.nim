@@ -4,6 +4,8 @@ import ../io_interface as delegate_interface
 import view, controller
 import ../../../shared_models/message_model as pinned_msg_model
 import ../../../shared_models/message_item as pinned_msg_item
+import ../../../shared_models/discord_message_item
+import ../../../shared_models/discord_message_author_item
 import ../../../shared_models/message_transaction_parameters_item
 import ../../../shared_models/message_reaction_item as pinned_msg_reaction_item
 import ../../../../global/global_singleton
@@ -170,7 +172,7 @@ proc buildPinnedMessageItem(self: Module, messageId: string, actionInitiatedBy: 
     contactDetails.displayName,
     contactDetails.details.localNickname,
     contactDetails.icon,
-    isCurrentUser,
+    (isCurrentUser and m.contentType.ContentType != ContentType.DiscordMessage),
     contactDetails.details.added,
     m.outgoingStatus,
     self.controller.getRenderedText(m.parsedText),
@@ -193,6 +195,18 @@ proc buildPinnedMessageItem(self: Module, messageId: string, actionInitiatedBy: 
       m.transactionParameters.signature),
     m.mentionedUsersPks,
     contactDetails.details.trustStatus,
+    newDiscordMessageItem(m.discordMessage.id,
+                          m.discordMessage.type,
+                          m.discordMessage.timestamp,
+                          m.discordMessage.timestampEdited,
+                          m.discordMessage.content,
+                          newDiscordMessageAuthorItem(
+                            m.discordMessage.author.id,
+                            m.discordMessage.author.name,
+                            m.discordMessage.author.discriminator,
+                            m.discordMessage.author.nickname,
+                            m.discordMessage.author.avatarUrl
+                          ))
   )
   item.pinned = true
   item.pinnedBy = actionInitiatedBy

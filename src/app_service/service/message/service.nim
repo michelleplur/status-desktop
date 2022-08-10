@@ -276,6 +276,10 @@ QtObject:
         # we don't need to reload the messages for archives older than 7 days
         self.handleMessagesReload(receivedData.communityId)
 
+    self.events.on(SignalType.DiscordCommunityImportFinished.event) do(e: Args):
+      var receivedData = DiscordCommunityImportFinishedSignal(e)
+      self.handleMessagesReload(receivedData.communityId)
+
   proc initialMessagesFetched(self: Service, chatId: string): bool =
     return self.msgCursor.hasKey(chatId)
 
@@ -309,6 +313,7 @@ QtObject:
     return (tokenStr, weiStr)
 
   proc onAsyncLoadMoreMessagesForChat*(self: Service, response: string) {.slot.} =
+    echo "RESPONSE: ", response
     let responseObj = response.parseJson
     if (responseObj.kind != JObject):
       info "load more messages response is not a json object"
@@ -340,6 +345,7 @@ QtObject:
         self.msgCursor[chatId] = msgCursor
       else:
         self.msgCursor[chatId] = self.lastUsedMsgCursor[chatId]
+
 
     var messagesArr: JsonNode
     var messages: seq[MessageDto]

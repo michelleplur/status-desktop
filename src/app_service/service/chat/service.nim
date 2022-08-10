@@ -135,6 +135,7 @@ QtObject:
     self.doConnect()
 
     try:
+      echo "LOADING CHATS"
       let response = status_chat.getChats()
 
       var chats: seq[ChatDto] = @[]
