@@ -238,7 +238,7 @@ proc convertToKeycardAccount*(keyStoreDir: string, account: JsonNode, settings: 
     error "error doing rpc request", methodName = "convertToKeycardAccount", exception=e.msg
     raise newException(RpcException, e.msg)
 
-proc login*(name, keyUid, hashedPassword, thumbnail, large: string, nodeCfgObj: string):
+proc login*(name, keyUid: string, kdfIterations: int, hashedPassword, thumbnail, large: string, nodeCfgObj: string):
   RpcResponse[JsonNode]
   {.raises: [Exception].} =
   try:
@@ -246,6 +246,7 @@ proc login*(name, keyUid, hashedPassword, thumbnail, large: string, nodeCfgObj: 
       "name": name,
       "key-uid": keyUid,
       "identityImage": newJNull(),
+      "kdfIterations": kdfIterations,
     }
 
     if(thumbnail.len>0 and large.len > 0):

@@ -21,6 +21,7 @@ logScope:
 
 const PATHS = @[PATH_WALLET_ROOT, PATH_EIP_1581, PATH_WHISPER, PATH_DEFAULT_WALLET]
 const ACCOUNT_ALREADY_EXISTS_ERROR =  "account already exists"
+const KDF_ITERATIONS = 256_000
 
 include utils
 
@@ -168,7 +169,8 @@ proc prepareAccountJsonObject(self: Service, account: GeneratedAccountDto, displ
     "name": if displayName == "": account.alias else: displayName,
     "address": account.address,
     "key-uid": account.keyUid,
-    "keycard-pairing": nil
+    "keycard-pairing": nil,
+    "kdfIterations": KDF_ITERATIONS,
   }
 
 proc getAccountDataForAccountId(self: Service, accountId: string, displayName: string): JsonNode =
@@ -476,7 +478,7 @@ proc login*(self: Service, account: AccountDto, password: string): string =
       "Networks": NETWORKS,
     }
 
-    let response = status_account.login(account.name, account.keyUid, hashedPassword, thumbnailImage,
+    let response = status_account.login(account.name, account.keyUid, account.kdfIterations, hashedPassword, thumbnailImage,
       largeImage, $nodeCfg)
     var error = "response doesn't contain \"error\""
     if(response.result.contains("error")):
