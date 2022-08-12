@@ -37,8 +37,6 @@ Feature: Status Desktop Chat
          When the user edits the message at index 0 and changes it to "Edited by me"
          Then the message (edited) is displayed in the last message
 
-
-    @mayfail
     Scenario: User can reply to another user's message
          When user joins chat room test
          Then the user can reply to the message at index 0 with "This is a reply to another user"
@@ -83,13 +81,11 @@ Feature: Status Desktop Chat
          Then the message 👍 is displayed in the last message
 
 
-    @mayfail
     Scenario: User cannot delete another user's message
          When user joins chat room test
          Then the user cannot delete the last message
 
 
-    @mayfail
 	Scenario Outline: The user can do a mention
 		When user joins chat room test
 		And the user inputs a mention to <displayName> with message <message>
@@ -99,7 +95,6 @@ Feature: Status Desktop Chat
 		| tester123   |  testing mention |
 
 
-    @mayfail
 	Scenario Outline: The user can not do a mention to not existing users
 		When user joins chat room test
 		Then the user cannot input a mention to a not existing user <displayName>

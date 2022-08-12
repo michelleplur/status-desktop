@@ -23,6 +23,10 @@ const PATHS = @[PATH_WALLET_ROOT, PATH_EIP_1581, PATH_WHISPER, PATH_DEFAULT_WALL
 const ACCOUNT_ALREADY_EXISTS_ERROR =  "account already exists"
 const output_csv {.booldefine.} = false
 
+# allow runtime override via environment variable. core contributors can set a
+# specific peer to set for testing messaging and mailserver functionality with squish.
+let TEST_PEER_ENR = getEnv("TEST_PEER_ENR").string
+
 include utils
 
 
@@ -284,6 +288,14 @@ proc getDefaultNodeConfig*(self: Service, installationId: string): JsonNode =
   result["ClusterConfig"]["FilterNodes"] =  %* self.fleetConfiguration.getNodes(fleet, FleetNodes.Waku)
   result["ClusterConfig"]["LightpushNodes"] =  %* self.fleetConfiguration.getNodes(fleet, FleetNodes.Waku)
 
+  if TEST_PEER_ENR != "":
+    result["ClusterConfig"]["BootNodes"] = %* @[TEST_PEER_ENR]
+    result["ClusterConfig"]["TrustedMailServers"] = %* @[TEST_PEER_ENR]
+    result["ClusterConfig"]["StaticNodes"] = %* @[TEST_PEER_ENR]
+    result["ClusterConfig"]["RendezvousNodes"] = %* (@[])
+    result["ClusterConfig"]["DiscV5BootstrapNodes"] = %* (@[])
+    result["Rendezvous"] = newJBool(false)
+
   # TODO: commented since it's not necessary (we do the connections thru C bindings). Enable it thru an option once status-nodes are able to be configured in desktop
   # result["ListenAddr"] = if existsEnv("STATUS_PORT"): newJString("0.0.0.0:" & $getEnv("STATUS_PORT")) else: newJString("0.0.0.0:30305")
   
@@ -508,6 +520,16 @@ proc login*(self: Service, account: AccountDto, password: string): string =
       "OutputMessageCSVEnabled": output_csv
     }
 
+    if TEST_PEER_ENR != "":
+      nodeCfg["Rendezvous"] = newJBool(false)
+      nodeCfg["ClusterConfig"] = %* {
+        "BootNodes": @[TEST_PEER_ENR],
+        "TrustedMailServers": @[TEST_PEER_ENR],
+        "StaticNodes": @[TEST_PEER_ENR],
+        "RendezvousNodes": @[],
+        "DiscV5BootstrapNodes": @[]
+      }
+      
     let response = status_account.login(account.name, account.keyUid, hashedPassword, thumbnailImage,
       largeImage, $nodeCfg)
     var error = "response doesn't contain \"error\""
