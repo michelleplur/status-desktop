@@ -21,7 +21,7 @@ logScope:
 
 const PATHS = @[PATH_WALLET_ROOT, PATH_EIP_1581, PATH_WHISPER, PATH_DEFAULT_WALLET]
 const ACCOUNT_ALREADY_EXISTS_ERROR =  "account already exists"
-const KDF_ITERATIONS = 256_000
+const KDF_ITERATIONS* {.intdefine.} = 256_000
 
 include utils
 
