@@ -34,6 +34,8 @@ type DiscordMessageAuthor* = object
   discriminator*: string
   nickname*: string
   avatarUrl*: string
+  avatarImagePayload*: string
+  avatarImageBase64*: string
 
 type DiscordMessageReference* = object
   messageId*: string
@@ -114,6 +116,8 @@ proc toDiscordMessageAuthor*(jsonObj: JsonNode): DiscordMessageAuthor =
   discard jsonObj.getProp("discriminator", result.discriminator)
   discard jsonObj.getProp("nickname", result.nickname)
   discard jsonObj.getProp("avatarUrl", result.avatarUrl)
+  discard jsonObj.getProp("avatarImagePayload", result.avatarImagePayload)
+  discard jsonObj.getProp("avatarImageBase64", result.avatarImageBase64)
 
 proc toDiscordMessage*(jsonObj: JsonNode): DiscordMessage =
   result = DiscordMessage()
