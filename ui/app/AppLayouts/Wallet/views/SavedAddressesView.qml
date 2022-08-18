@@ -6,6 +6,7 @@ import utils 1.0
 import StatusQ.Controls 0.1
 import StatusQ.Components 0.1
 import StatusQ.Core 0.1
+import StatusQ.Core.Utils 0.1
 import StatusQ.Core.Theme 0.1
 import StatusQ.Popups 0.1
 import shared.controls 1.0
@@ -71,14 +72,16 @@ Item {
             id: savedAddress
             title: name
             objectName: name
-            subTitle: name + " \u2022 " + Utils.getElidedCompressedPk(address)
+            subTitle: (ensName.length > 0 ? ensName + " \u2022 " : "")
+                      + Utils.elideText(address, 6, 4)
             implicitWidth: parent.width
             color: "transparent"
             border.color: Theme.palette.baseColor5
-            //TODO uncomment when #6456 is fixed
-            //titleTextIcon: RootStore.favouriteAddress ? "star-icon" : ""
+            titleTextIcon: favourite ? "star-icon" : ""
             statusListItemComponentsSlot.spacing: 0
             property bool showButtons: sensor.containsMouse
+            // TODO: fetch this from status-go
+            readonly property string ensName: ""
 
             components: [
                 StatusRoundButton {
@@ -95,21 +98,18 @@ Item {
                     store: RootStore
                     textToCopy: address
                 },
-                //TODO uncomment when #6456 is fixed
-//                StatusRoundButton {
-//                    icon.color: savedAddress.showButtons ? Theme.palette.directColor1 : Theme.palette.baseColor1
-//                    type: StatusRoundButton.Type.Tertiary
-//                    icon.name: savedAddress.favouriteAddress ? "favourite" : "unfavourite"
-//                    onClicked: {
-//                        RootStore.setFavourite();
-//                    }
-//                },
+                StatusRoundButton {
+                    icon.color: savedAddress.showButtons ? Theme.palette.directColor1 : Theme.palette.baseColor1
+                    type: StatusRoundButton.Type.Tertiary
+                    icon.name: favourite ? "unfavourite" : "favourite"
+                    onClicked: _internal.error = RootStore.createOrUpdateSavedAddress(name, address, !favourite)
+                },
                 StatusRoundButton {
                     icon.color: savedAddress.showButtons ? Theme.palette.directColor1 : Theme.palette.baseColor1
                     type: StatusRoundButton.Type.Tertiary
                     icon.name: "more"
                     onClicked: {
-                        editDeleteMenu.openMenu(name, address);
+                        editDeleteMenu.openMenu(name, address, favourite);
                     }
                 }
             ]
@@ -120,14 +120,17 @@ Item {
         id: editDeleteMenu
         property string contactName
         property string contactAddress
-        function openMenu(name, address) {
-            contactName = name;
-            contactAddress = address;
+        property bool storeFavourite
+        function openMenu(name, address, favourite) {
+            contactName = name
+            contactAddress = address
+            storeFavourite = favourite
             popup();
         }
         onClosed: {
-            contactName = "";
-            contactAddress = "";
+            contactName = ""
+            contactAddress = ""
+            storeFavourite = false
         }
         StatusMenuItem {
             text: qsTr("Edit")
@@ -138,7 +141,8 @@ Item {
                                  {
                                      edit: true,
                                      address: editDeleteMenu.contactAddress,
-                                     name: editDeleteMenu.contactName
+                                     name: editDeleteMenu.contactName,
+                                     favourite: editDeleteMenu.storeFavourite
                                  })
             }
         }
@@ -149,8 +153,9 @@ Item {
             icon.name: "delete"
             objectName: "deleteSavedAddress"
             onTriggered: {
-                deleteAddressConfirm.name = editDeleteMenu.contactName;
-                deleteAddressConfirm.address = editDeleteMenu.contactAddress;
+                deleteAddressConfirm.name = editDeleteMenu.contactName
+                deleteAddressConfirm.address = editDeleteMenu.contactAddress
+                deleteAddressConfirm.favourite = editDeleteMenu.storeFavourite
                 deleteAddressConfirm.open()
             }
         }
@@ -165,7 +170,7 @@ Item {
             contactsStore: root.contactsStore
             onSave: {
                 _internal.loading = true
-                _internal.error = RootStore.createOrUpdateSavedAddress(name, address)
+                _internal.error = RootStore.createOrUpdateSavedAddress(name, address, favourite)
                 _internal.loading = false
                 close()
             }
@@ -176,6 +181,7 @@ Item {
         id: deleteAddressConfirm
         property string address
         property string name
+        property bool favourite
         // NOTE: the `text` property was created as a workaround because
         // setting StatusBaseText.text to `qsTr("...").arg("...")`
         // caused no text to render
