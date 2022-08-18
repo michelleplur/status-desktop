@@ -97,7 +97,8 @@ proc createFetchMoreMessagesItem(self: Module): Item =
     newTransactionParametersItem("","","","","","",-1,""),
     @[],
     TrustStatus.Unknown,
-    newDiscordMessageItem("", "", "", "", "", newDiscordMessageAuthorItem("", "", "", "", ""))
+    # newDiscordMessageItem("", "", "", "", "", newDiscordMessageAuthorItem("", "", "", "", "", ""))
+    newDiscordMessageItem("", "", "", "", "", "", "", "")
   )
 
 proc createChatIdentifierItem(self: Module): Item =
@@ -135,7 +136,8 @@ proc createChatIdentifierItem(self: Module): Item =
     newTransactionParametersItem("","","","","","",-1,""),
     @[],
     TrustStatus.Unknown,
-    newDiscordMessageItem("","","","","", newDiscordMessageAuthorItem("", "", "", "", ""))
+    # newDiscordMessageItem("","","","","", newDiscordMessageAuthorItem("", "", "", "", "", ""))
+    newDiscordMessageItem("","","","","","","","")
   )
 
 proc checkIfMessageLoadedAndScrollToItIfItIs(self: Module): bool =
@@ -212,13 +214,18 @@ method newMessagesLoaded*(self: Module, messages: seq[MessageDto], reactions: se
                               m.discordMessage.timestamp,
                               m.discordMessage.timestampEdited,
                               m.discordMessage.content,
-                              newDiscordMessageAuthorItem(
-                                m.discordMessage.author.id,
-                                m.discordMessage.author.name,
-                                m.discordMessage.author.discriminator,
-                                m.discordMessage.author.nickname,
-                                m.discordMessage.author.avatarUrl,
-                              ))
+                              m.discordmessage.author.avatarUrl,
+                              m.discordmessage.author.name,
+                              m.discordMessage.author.avatarImageBase64
+                             )
+                              # newDiscordMessageAuthorItem(
+                              #   m.discordMessage.author.id,
+                              #   m.discordMessage.author.name,
+                              #   m.discordMessage.author.discriminator,
+                              #   m.discordMessage.author.nickname,
+                              #   m.discordMessage.author.avatarUrl,
+                              #   m.discordMessage.author.avatarImageBase64
+                              # ))
       )
 
       for r in reactions:
@@ -312,13 +319,18 @@ method messageAdded*(self: Module, message: MessageDto) =
                           message.discordMessage.timestamp,
                           message.discordMessage.timestampEdited,
                           message.discordMessage.content,
-                          newDiscordMessageAuthorItem(
-                            message.discordMessage.author.id, 
-                            message.discordMessage.author.name, 
-                            message.discordMessage.author.discriminator, 
-                            message.discordMessage.author.nickname, 
-                            message.discordMessage.author.avatarUrl
-                          ))
+                          message.discordMessage.author.avatarUrl,
+                          message.discordMessage.author.name,
+                          message.discordMessage.author.avatarImageBase64
+                         )
+                          # newDiscordMessageAuthorItem(
+                          #   message.discordMessage.author.id, 
+                          #   message.discordMessage.author.name, 
+                          #   message.discordMessage.author.discriminator, 
+                          #   message.discordMessage.author.nickname, 
+                          #   message.discordMessage.author.avatarUrl,
+                          #   message.discordMessage.author.avatarImageBase64
+                          # ))
   )
 
   self.view.model().insertItemBasedOnTimestamp(item)

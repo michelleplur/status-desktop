@@ -240,8 +240,6 @@ Item {
 
         model: messageStore.messagesModel
 
-        Component.onCompleted: chatLogView.scrollToBottom(true)
-
         delegate: MessageView {
             id: msgDelegate
             objectName: "chatMessageViewDelegate"

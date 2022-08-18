@@ -170,7 +170,6 @@ proc init*(self: Controller) =
     self.events.on(SIGNAL_RELOAD_MESSAGES) do(e: Args):
       let args = ReloadMessagesArgs(e)
       if (args.communityId == self.sectionId):
-        echo "RELOADING MESSAGES!"
         self.messageService.asyncLoadInitialMessagesForChat(self.getActiveChatId())
     
     self.events.on(SIGNAL_CATEGORY_MUTED) do(e: Args):
@@ -255,6 +254,7 @@ proc setActiveItemSubItem*(self: Controller, itemId: string, subItemId: string) 
 
   let chatId = self.getActiveChatId()
   if chatId != "":
+    echo "LOADING MESSAGES"
     self.messageService.asyncLoadInitialMessagesForChat(chatId)
 
   # We need to take other actions here like notify status go that unviewed mentions count is updated and so...

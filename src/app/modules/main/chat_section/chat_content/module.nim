@@ -200,13 +200,17 @@ proc buildPinnedMessageItem(self: Module, messageId: string, actionInitiatedBy: 
                           m.discordMessage.timestamp,
                           m.discordMessage.timestampEdited,
                           m.discordMessage.content,
-                          newDiscordMessageAuthorItem(
-                            m.discordMessage.author.id,
-                            m.discordMessage.author.name,
-                            m.discordMessage.author.discriminator,
-                            m.discordMessage.author.nickname,
-                            m.discordMessage.author.avatarUrl
-                          ))
+                          m.discordMessage.author.avatarUrl,
+                          m.discordMessage.author.name,
+                          m.discordMessage.author.avatarImageBase64
+                          # newDiscordMessageAuthorItem(
+                          #   m.discordMessage.author.id,
+                          #   m.discordMessage.author.name,
+                          #   m.discordMessage.author.discriminator,
+                          #   m.discordMessage.author.nickname,
+                          #   m.discordMessage.author.avatarUrl,
+                          #   m.discordMessage.author.avatarImageBase64)
+                          )
   )
   item.pinned = true
   item.pinnedBy = actionInitiatedBy

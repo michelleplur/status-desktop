@@ -11,7 +11,10 @@ QtObject:
       timestamp: string
       timestampEdited: string
       content: string
-      author: DiscordMessageAuthorItem
+      # author: DiscordMessageAuthorItem
+      authorName: string
+      authorAvatarUrl: string
+      authorAvatarImageBase64: string
 
   proc setup(self: DiscordMessageItem) =
     self.QObject.setup
@@ -25,7 +28,10 @@ QtObject:
       timestamp: string,
       timestampEdited: string,
       content: string,
-      author: DiscordMessageAuthorItem,
+      # author: DiscordMessageAuthorItem,
+      authorAvatarUrl: string,
+      authorName: string,
+      authorAvatarImageBase64: string
       ): DiscordMessageItem =
     new(result, delete)
     result.setup
@@ -34,7 +40,10 @@ QtObject:
     result.timestamp = timestamp
     result.timestampEdited = timestampEdited
     result.content = content
-    result.author = author
+    # result.author = author
+    result.authorAvatarUrl = authorAvatarUrl
+    result.authorName = authorName
+    result.authorAvatarImageBase64 = authorAvatarImageBase64
 
   proc `$`*(self: DiscordMessageItem): string =
     result = fmt"""DiscordMessageItem(
@@ -43,7 +52,8 @@ QtObject:
       timestamp: {$self.timestamp},
       timestampEdited: {$self.timestampEdited},
       content: {$self.content},
-      author: {$self.author}
+      authorAvatarUrl: {$self.authorAvatarUrl},
+      authorAvatarImageBase64: {$self.authorAvatarImageBase64},
       )"""
 
   proc idChanged*(self: DiscordMessageItem) {.signal.}
@@ -82,10 +92,33 @@ QtObject:
     read = content
     notify = contentChanged
 
-  proc authorChanged*(self: DiscordMessageItem) {.signal.}
-  proc author*(self: DiscordMessageItem): DiscordMessageAuthorItem {.inline.} =
-    self.author
+  proc authoAvatarUrlChanged*(self: DiscordMessageItem) {.signal.}
+  proc authorAvatarUrl*(self: DiscordMessageItem): string {.inline.} =
+    self.authorAvatarUrl
 
-  QtProperty[string] author:
-    read = author
-    notify = authorChanged
+  QtProperty[string] authorAvatarUrl:
+    read = authorAvatarUrl
+    notify = authorAvatarUrlChanged
+
+  proc authorNameChanged*(self: DiscordMessageItem) {.signal.}
+  proc authorName*(self: DiscordMessageItem): string {.inline.} =
+    self.authorName
+
+  QtProperty[string] authorName:
+    read = authorName
+    notify = authorNameChanged
+
+  proc authorAvatarImageBase64Changed*(self: DiscordMessageItem) {.signal.}
+  proc authorAvatarImageBase64*(self: DiscordMessageItem): string {.inline.} =
+    self.authorAvatarImageBase64
+
+  QtProperty[string] authorAvatarImageBase64:
+    read = authorAvatarImageBase64
+    notify = authorAvatarImageBase64Changed
+  # proc authorChanged*(self: DiscordMessageItem) {.signal.}
+  # proc author*(self: DiscordMessageItem): DiscordMessageAuthorItem {.inline.} =
+  #   self.author
+
+  # QtProperty[QVariant] author:
+  #   read = author
+  #   notify = authorChanged

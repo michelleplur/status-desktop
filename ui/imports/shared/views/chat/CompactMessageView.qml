@@ -11,6 +11,7 @@ import shared.controls.chat 1.0
 
 import StatusQ.Controls 0.1 as StatusQControls
 import StatusQ.Core.Utils 0.1 as StatusQUtils
+import StatusQ.Core 0.1
 import StatusQ.Components 0.1
 
 Item {
@@ -366,8 +367,10 @@ Item {
 
             image: root.senderIcon
             pubkey: senderId
+            showRing: root.contentType != Constants.messageContentType.discordMessageType
             name: senderDisplayName
             messageContextMenu: root.messageContextMenu
+            disabled: root.contentType == Constants.messageContentType.discordMessageType
 
             onClicked: root.clickMessage(true, false, false, null, false, false, false, false, "")
         }
@@ -382,9 +385,19 @@ Item {
             displayName: senderDisplayName
             localName: senderLocalName
             amISender: root.amISender
-            onClickMessage: {
-                root.clickMessage(true, false, false, null, false, false, false, false, "")
-            }
+            disabled: root.contentType == Constants.messageContentType.discordMessageType
+            onClickMessage: root.clickMessage(true, false, false, null, false, false, false, false, "")
+        }
+
+        StatusBaseText {
+          id: importedLabel
+          text: qsTr("Imported from discord •")
+          color: Style.current.secondaryText
+          font.pixelSize: Style.current.asideTextFontSize
+          visible: root.contentType == Constants.messageContentType.discordMessageType
+          anchors.left: chatName.right
+          anchors.leftMargin: 4
+          anchors.verticalCenter: chatName.verticalCenter
         }
 
         VerificationLabel {
@@ -393,7 +406,7 @@ Item {
             anchors.leftMargin: 4
             anchors.bottom: chatName.bottom
             anchors.bottomMargin: 4
-            visible: !root.amISender && chatName.visible
+            visible: !root.amISender && chatName.visible && root.contentType != Constants.messageContentType.discordMessageType
             trustStatus: senderTrustStatus
         }
 
@@ -401,7 +414,7 @@ Item {
             id: chatTime
             visible: !editModeOn && headerRepeatCondition
             anchors.verticalCenter: chatName.verticalCenter
-            anchors.left: trustStatus.right
+            anchors.left: importedLabel.visible ? importedLabel.right : trustStatus.right
             anchors.leftMargin: 4
             color: Style.current.secondaryText
             timestamp: messageTimestamp

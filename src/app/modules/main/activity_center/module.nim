@@ -96,14 +96,15 @@ proc createMessageItemFromDto(self: Module, message: MessageDto, chatDetails: Ch
     newTransactionParametersItem("","","","","","",-1,""),
     message.mentionedUsersPks,
     contactDetails.details.trustStatus,
-    newDiscordMessageItem("","","","","", 
-                          newDiscordMessageAuthorItem(
-                            message.discordMessage.author.id,
-                            message.discordMessage.author.name,
-                            message.discordMessage.author.discriminator,
-                            message.discordMessage.author.nickname,
-                            message.discordMessage.author.avatarUrl
-                          ))))
+    newDiscordMessageItem("","","","","","","", "")))
+                          # newDiscordMessageAuthorItem(
+                          #   message.discordMessage.author.id,
+                          #   message.discordMessage.author.name,
+                          #   message.discordMessage.author.discriminator,
+                          #   message.discordMessage.author.nickname,
+                          #   message.discordMessage.author.avatarUrl,
+                          #   message.discordMessage.author.avatarImageBase64
+                          # ))))
 
 method convertToItems*(
   self: Module,

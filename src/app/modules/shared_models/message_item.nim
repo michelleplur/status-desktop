@@ -99,8 +99,10 @@ proc initItem*(
 
   if ContentType.DiscordMessage == contentType:
     result.messageText = discordMessage.content
-    result.senderDisplayName = discordMessage.author.nickname
-    result.senderIcon = discordMessage.author.avatarUrl
+    result.senderDisplayName = discordMessage.authorName
+    result.senderIcon = discordMessage.authorAvatarUrl
+    if discordMessage.authorAvatarImageBase64 != "":
+      result.senderIcon = discordMessage.authorAvatarImageBase64
     result.timestamp = parseInt(discordMessage.timestamp)*1000
     if discordMessage.timestampEdited != "":
       result.timestamp = parseInt(discordMessage.timestampEdited)*1000

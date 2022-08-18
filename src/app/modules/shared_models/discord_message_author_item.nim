@@ -8,6 +8,7 @@ QtObject:
       discriminator: string
       nickname*: string
       avatarUrl*: string
+      avatarImageBase64*: string
 
   proc setup(self: DiscordMessageAuthorItem) =
     self.QObject.setup
@@ -20,7 +21,8 @@ QtObject:
       name: string,
       discriminator: string,
       nickname: string,
-      avatarUrl: string
+      avatarUrl: string,
+      avatarImageBase64: string,
       ): DiscordMessageAuthorItem =
     new(result, delete)
     result.setup
@@ -29,6 +31,7 @@ QtObject:
     result.discriminator = discriminator
     result.nickname = nickname
     result.avatarUrl = avatarUrl
+    result.avatarImageBase64 = avatarImageBase64
 
   proc `$`*(self: DiscordMessageAuthorItem): string =
     result = fmt"""DiscordMessageAuthorItem(
@@ -37,6 +40,7 @@ QtObject:
       discriminator: {$self.discriminator},
       nickname: {$self.nickname},
       avatarUrl: {$self.avatarUrl},
+      avatarImageBase64: {$self.avatarImageBase64},
       )"""
 
   proc id*(self: DiscordMessageAuthorItem): string {.inline.} =
@@ -83,3 +87,12 @@ QtObject:
   QtProperty[string] avatarUrl:
     read = avatarUrl
     notify = avatarUrlChanged
+
+  proc avatarImageBase64*(self: DiscordMessageAuthorItem): string {.inline.} =
+    self.avatarImageBase64
+
+  proc avatarImageBase64Changed*(self: DiscordMessageAuthorItem) {.signal.}
+
+  QtProperty[string] avatarImageBase64:
+    read = avatarImageBase64
+    notify = avatarImageBase64Changed
