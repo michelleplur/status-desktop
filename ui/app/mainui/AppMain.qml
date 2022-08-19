@@ -400,11 +400,9 @@ Item {
 
             ModuleWarning {
                 id: versionWarning
-                width: parent.width
-                height: 32
+                Layout.fillWidth: true
                 visible: appMain.rootStore.newVersionAvailable
-                color: Style.current.green
-                btnWidth: 100
+                color: Theme.palette.successColor1
                 text: qsTr("A new version of Status (%1) is available").arg(appMain.rootStore.latestVersion)
                 btnText: qsTr("Download")
                 onClick: function(){
@@ -421,11 +419,9 @@ Item {
 
             ModuleWarning {
                 id: versionUpToDate
-                width: parent.width
-                height: 32
+                Layout.fillWidth: true
                 visible: false
-                color: Style.current.green
-                btnWidth: 100
+                color: Theme.palette.successColor1
                 text: qsTr("Your version is up to date")
                 btnText: qsTr("Close")
 
@@ -444,6 +440,50 @@ Item {
                 }
             }
 
+            ModuleWarning {
+                Layout.fillWidth: true
+                readonly property int progress: communitiesPortalLayoutContainer.communitiesStore.discordImportProgress
+                readonly property bool inProgress: progress > 0 && progress < 100
+                readonly property bool finished: progress >= 100
+                readonly property bool stopped: communitiesPortalLayoutContainer.communitiesStore.discordImportProgressStopped
+                readonly property int errors: communitiesPortalLayoutContainer.communitiesStore.discordImportErrorsCount
+                readonly property int warnings: communitiesPortalLayoutContainer.communitiesStore.discordImportWarningsCount
+                readonly property string communityId: communitiesPortalLayoutContainer.communitiesStore.discordImportCommunityId
+                readonly property string communityName: communitiesPortalLayoutContainer.communitiesStore.discordImportCommunityName
+
+                visible: inProgress || finished || stopped
+                color: errors ? Theme.palette.dangerColor1 : Theme.palette.successColor1
+                text: {
+                    if (finished || stopped) {
+                        if (errors)
+                            return qsTr("The import of ‘%1’ from Discord to Status was stopped: <a href='#'>Critical issues found</a>").arg(communityName)
+
+                        let result = qsTr("‘%1’ was successfully imported from Discord to Status").arg(communityName) + "  <a href='#'>"
+                        if (warnings)
+                            result += qsTr("Details (%1)").arg(qsTr("%n issue(s)", "", warnings))
+                        else
+                            result += qsTr("Details")
+                        result += "</a>"
+                        return result
+                    }
+                    if (inProgress) {
+                        let result = qsTr("Importing ‘%1’ from Discord to Status").arg(communityName) + "  <a href='#'>"
+                        if (warnings)
+                            result += qsTr("Check progress (%1)").arg(qsTr("%n issue(s)", "", warnings))
+                        else
+                            result += qsTr("Check progress")
+                        result += "</a>"
+                        return result
+                    }
+                }
+                onLinkActivated: Global.openPopup(communitiesPortalLayoutContainer.discordImportProgressPopup)
+                progressValue: progress
+                closeBtnVisible: finished || stopped
+                btnText: finished && !errors ? qsTr("Visit your Community") : ""
+                onClick: function() {
+                    communitiesPortalLayoutContainer.communitiesStore.setActiveCommunity(communityId)
+                }
+            }
 
             Item {
                 Layout.fillWidth: true

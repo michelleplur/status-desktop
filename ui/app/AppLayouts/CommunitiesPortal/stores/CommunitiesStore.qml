@@ -13,6 +13,12 @@ QtObject {
     property bool discordDataExtractionInProgress: root.communitiesModuleInst.discordDataExtractionInProgress
     property int discordImportErrorsCount: root.communitiesModuleInst.discordImportErrorsCount
     property int discordImportWarningsCount: root.communitiesModuleInst.discordImportWarningsCount
+    property var discordImportErrors: root.communitiesModuleInst.discordImportErrors
+    property int discordImportProgress: root.communitiesModuleInst.discordImportProgress
+    property bool discordImportProgressStopped: root.communitiesModuleInst.discordImportProgressStopped
+    property string discordImportCommunityId: root.communitiesModuleInst.discordImportCommunityId
+    property string discordImportCommunityName: root.communitiesModuleInst.discordImportCommunityName
+    property var discordImportTasks: root.communitiesModuleInst.discordImportTasks
     property string locale: localAppSettings.language
     property var advancedModule: profileSectionModule.advancedModule
     property bool isCommunityHistoryArchiveSupportEnabled: advancedModule? advancedModule.isCommunityHistoryArchiveSupportEnabled : false
@@ -108,4 +114,30 @@ QtObject {
         root.communitiesModuleInst.unselectDiscordChannel(id)
     }
 
+    function requestImportDiscordCommunity(args = {
+                                name: "",
+                                description: "",
+                                introMessage: "",
+                                outroMessage: "",
+                                color: "",
+                                tags: "",
+                                image: {
+                                    src: "",
+                                    AX: 0,
+                                    AY: 0,
+                                    BX: 0,
+                                    BY: 0,
+                                },
+                                options: {
+                                    historyArchiveSupportEnabled: false,
+                                    checkedMembership: false,
+                                    pinMessagesAllowedForMembers: false
+                                }
+                             }, from = 0) {
+        return communitiesModuleInst.requestImportDiscordCommunity(
+                    args.name, args.description, args.introMessage, args.outroMessage, args.options.checkedMembership,
+                    args.color, args.tags,
+                    args.image.src, args.image.AX, args.image.AY, args.image.BX, args.image.BY,
+                    args.options.historyArchiveSupportEnabled, args.options.pinMessagesAllowedForMembers, from);
+    }
 }

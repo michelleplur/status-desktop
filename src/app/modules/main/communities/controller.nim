@@ -66,6 +66,10 @@ proc init*(self: Controller) =
     let args = DiscordCategoriesAndChannelsArgs(e)
     self.delegate.discordCategoriesAndChannelsExtracted(args.categories, args.channels, args.oldestMessageTimestamp, args.errors, args.errorsCount)
 
+  self.events.on(SIGNAL_DISCORD_COMMUNITY_IMPORT_PROGRESS) do(e:Args):
+    let args = DiscordImportProgressArgs(e)
+    self.delegate.discordImportProgressUpdated(args.communityId, args.communityName, args.tasks, args.progress, args.errorsCount, args.warningsCount, args.stopped)
+
 proc getCommunityTags*(self: Controller): string =
   result = self.communityService.getCommunityTags()
 
@@ -108,6 +112,36 @@ proc createCommunity*(
     historyArchiveSupportEnabled,
     pinMessageAllMembersEnabled,
     bannerJsonStr)
+
+proc requestImportDiscordCommunity*(
+    self: Controller,
+    name: string,
+    description: string,
+    introMessage: string,
+    outroMessage: string,
+    access: int,
+    color: string,
+    tags: string,
+    imageUrl: string,
+    aX: int, aY: int, bX: int, bY: int,
+    historyArchiveSupportEnabled: bool,
+    pinMessageAllMembersEnabled: bool,
+    filesToImport: seq[string],
+    fromTimestamp: int) =
+  self.communityService.requestImportDiscordCommunity(
+    name,
+    description,
+    introMessage,
+    outroMessage,
+    access,
+    color,
+    tags,
+    imageUrl,
+    aX, aY, bX, bY,
+    historyArchiveSupportEnabled,
+    pinMessageAllMembersEnabled,
+    filesToImport,
+    fromTimestamp)
 
 proc reorderCommunityChat*(
     self: Controller,

@@ -25,6 +25,7 @@ StatusScrollView {
     property var importCommunitiesPopup: importCommunitiesPopupComponent
     property var createCommunitiesPopup: createCommunitiesPopupComponent
     property int contentPrefferedWidth: 100
+    property var discordImportProgressPopup: discordImportProgressDialog
 
     QtObject {
         id: d
@@ -235,6 +236,13 @@ StatusScrollView {
                     }
                 }
             }
+        }
+    }
+
+    Component {
+        id: discordImportProgressDialog
+        DiscordImportProgressDialog {
+            store: root.communitiesStore
         }
     }
 }

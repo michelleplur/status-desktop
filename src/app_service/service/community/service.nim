@@ -80,6 +80,15 @@ type
     errors*: Table[string, DiscordImportError]
     errorsCount*: int
 
+  DiscordImportProgressArgs* = ref object of Args
+    communityId*: string
+    communityName*: string
+    tasks*: seq[DiscordImportTaskProgress]
+    progress*: float
+    errorsCount*: int
+    warningsCount*: int
+    stopped*: bool
+
 # Signals which may be emitted by this service:
 const SIGNAL_COMMUNITY_JOINED* = "communityJoined"
 const SIGNAL_COMMUNITY_MY_REQUEST_ADDED* = "communityMyRequestAdded"
@@ -107,6 +116,8 @@ const SIGNAL_COMMUNITY_MUTED* = "communityMuted"
 const SIGNAL_CATEGORY_MUTED* = "categoryMuted"
 const SIGNAL_CATEGORY_UNMUTED* = "categoryUnmuted"
 const SIGNAL_DISCORD_CATEGORIES_AND_CHANNELS_EXTRACTED* = "discordCategoriesAndChannelsExtracted"
+const SIGNAL_DISCORD_COMMUNITY_IMPORT_FINISHED* = "discordCommunityImportFinished"
+const SIGNAL_DISCORD_COMMUNITY_IMPORT_PROGRESS* = "discordCommunityImportProgress"
 
 QtObject:
   type
@@ -191,6 +202,22 @@ QtObject:
       var receivedData = DiscordCategoriesAndChannelsExtractedSignal(e)
       self.events.emit(SIGNAL_DISCORD_CATEGORIES_AND_CHANNELS_EXTRACTED,
         DiscordCategoriesAndChannelsArgs(categories: receivedData.categories, channels: receivedData.channels, oldestMessageTimestamp: receivedData.oldestMessageTimestamp, errors: receivedData.errors, errorsCount: receivedData.errorsCount))
+
+    self.events.on(SignalType.DiscordCommunityImportFinished.event) do(e: Args):
+      var receivedData = DiscordCommunityImportFinishedSignal(e)
+      self.events.emit(SIGNAL_DISCORD_COMMUNITY_IMPORT_FINISHED, CommunityIdArgs(communityId: receivedData.communityId))
+
+    self.events.on(SignalType.DiscordCommunityImportProgress.event) do(e: Args):
+      var receivedData = DiscordCommunityImportProgressSignal(e)
+      self.events.emit(SIGNAL_DISCORD_COMMUNITY_IMPORT_PROGRESS, DiscordImportProgressArgs(
+        communityId: receivedData.communityId,
+        communityName: receivedData.communityName,
+        tasks: receivedData.tasks,
+        progress: receivedData.progress,
+        errorsCount: receivedData.errorsCount,
+        warningsCount: receivedData.warningsCount,
+        stopped: receivedData.stopped
+      ))
 
   proc updateMissingFields(chatDto: var ChatDto, chat: ChatDto) =
     # This proc sets fields of `chatDto` which are available only for community channels.
@@ -615,6 +642,49 @@ QtObject:
 
     except Exception as e:
       error "Error leaving community", msg = e.msg, communityId
+
+  proc requestImportDiscordCommunity*(
+      self: Service,
+      name: string,
+      description: string,
+      introMessage: string,
+      outroMessage: string,
+      access: int,
+      color: string,
+      tags: string,
+      imageUrl: string,
+      aX: int, aY: int, bX: int, bY: int,
+      historyArchiveSupportEnabled: bool,
+      pinMessageAllMembersEnabled: bool,
+      filesToImport: seq[string],
+      fromTimestamp: int) =
+    try:
+      var image = singletonInstance.utils.formatImagePath(imageUrl)
+      var tagsString = tags
+      if len(tagsString) == 0:
+        tagsString = "[]"
+
+      let response = status_go.requestImportDiscordCommunity(
+        name,
+        description,
+        introMessage,
+        outroMessage,
+        access,
+        color,
+        tagsString,
+        image,
+        aX, aY, bX, bY,
+        historyArchiveSupportEnabled,
+        pinMessageAllMembersEnabled,
+        filesToImport,
+        fromTimestamp)
+
+      if response.error != nil:
+        let error = Json.decode($response.error, RpcError)
+        raise newException(RpcException, "Error creating community: " & error.message)
+
+    except Exception as e:
+      error "Error creating community", msg = e.msg
 
   proc createCommunity*(
       self: Service,

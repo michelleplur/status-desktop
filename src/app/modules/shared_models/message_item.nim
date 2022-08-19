@@ -1,9 +1,9 @@
-import json, strformat
+import json, strformat, std/strutils
 import ../../../app_service/common/types
 import ../../../app_service/service/contacts/dto/contacts
 
 export types.ContentType
-import message_reaction_model, message_reaction_item, message_transaction_parameters_item
+import message_reaction_model, message_reaction_item, message_transaction_parameters_item, discord_message_item
 
 type
   Item* = ref object
@@ -37,6 +37,7 @@ type
     transactionParameters: TransactionParametersItem
     mentionedUsersPks: seq[string]
     senderTrustStatus: TrustStatus
+    discordMessage: DiscordMessageItem
 
 proc initItem*(
     id,
@@ -61,7 +62,8 @@ proc initItem*(
     links: seq[string],
     transactionParameters: TransactionParametersItem,
     mentionedUsersPks: seq[string],
-    senderTrustStatus: TrustStatus
+    senderTrustStatus: TrustStatus,
+    discordMessage: DiscordMessageItem
     ): Item =
   result = Item()
   result.id = id
@@ -93,6 +95,17 @@ proc initItem*(
   result.gapFrom = 0
   result.gapTo = 0
   result.senderTrustStatus = senderTrustStatus
+  result.discordMessage = discordMessage
+
+  if ContentType.DiscordMessage == contentType:
+    result.messageText = discordMessage.content
+    result.senderDisplayName = discordMessage.authorName
+    result.senderIcon = discordMessage.authorAvatarUrl
+    if discordMessage.authorAvatarImageBase64 != "":
+      result.senderIcon = discordMessage.authorAvatarImageBase64
+    result.timestamp = parseInt(discordMessage.timestamp)*1000
+    if discordMessage.timestampEdited != "":
+      result.timestamp = parseInt(discordMessage.timestampEdited)*1000
 
 proc `$`*(self: Item): string =
   result = fmt"""Item(
@@ -120,6 +133,7 @@ proc `$`*(self: Item): string =
     transactionParameters:{$self.transactionParameters},
     mentionedUsersPks:{$self.mentionedUsersPks},
     senderTrustStatus:{$self.senderTrustStatus},
+    discordMessage:{$self.discordMessage},
     )"""
 
 proc id*(self: Item): string {.inline.} =
@@ -245,6 +259,9 @@ proc `mentionedUsersPks=`*(self: Item, mentionedUsersPks: seq[string]) {.inline.
 
 proc transactionParameters*(self: Item): TransactionParametersItem {.inline.} =
   self.transactionParameters
+
+proc discordMessage*(self: Item): DiscordMessageItem {.inline.} =
+  self.discordMessage
 
 proc toJsonNode*(self: Item): JsonNode =
   result = %* {

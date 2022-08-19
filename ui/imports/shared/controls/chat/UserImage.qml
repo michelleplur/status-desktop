@@ -18,6 +18,7 @@ Loader {
     property string image
     property bool showRing: true
     property bool interactive: true
+    property bool disabled: false
     property var messageContextMenu
 
     property int colorId: Utils.colorIdForPubkey(pubkey)
@@ -48,16 +49,18 @@ Loader {
             active: root.interactive
 
             sourceComponent: MouseArea {
-                cursorShape: Qt.PointingHandCursor
-                hoverEnabled: true
+                cursorShape: hoverEnabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                hoverEnabled: !root.disabled
                 onClicked: {
-                    if (!!root.messageContextMenu) {
-                        // Set parent, X & Y positions for the messageContextMenu
-                        root.messageContextMenu.parent = root
-                        root.messageContextMenu.setXPosition = function() { return root.width + 4 }
-                        root.messageContextMenu.setYPosition = function() { return 0 }
+                    if (!root.disabled) {
+                        if (!!root.messageContextMenu) {
+                            // Set parent, X & Y positions for the messageContextMenu
+                            root.messageContextMenu.parent = root
+                            root.messageContextMenu.setXPosition = function() { return root.width + 4 }
+                            root.messageContextMenu.setYPosition = function() { return 0 }
+                        }
+                        root.clicked()
                     }
-                    root.clicked()
                 }
             }
         }

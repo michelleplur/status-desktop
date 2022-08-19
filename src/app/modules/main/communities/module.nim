@@ -10,6 +10,10 @@ import ./models/discord_categories_model
 import ./models/discord_channel_item
 import ./models/discord_channels_model
 import ./models/discord_file_list_model
+import ./models/discord_import_task_item
+import ./models/discord_import_tasks_model
+import ./models/discord_import_error_item
+import ./models/discord_import_errors_model
 import ../../shared_models/section_item
 import ../../shared_models/[member_item, member_model, section_model]
 import ../../../global/global_singleton
@@ -158,6 +162,18 @@ method getDiscordChannelItem(self: Module, c: DiscordChannelDto): DiscordChannel
       c.filePath,
       true)
 
+method getDiscordImportTaskItem(self: Module, t: DiscordImportTaskProgress): DiscordImportTaskItem =
+
+  var errorItems: seq[DiscordImportErrorItem] = @[]
+  for error in t.errors:
+    errorItems.add(initDiscordImportErrorItem(t.`type`, error.code, error.message))
+
+  return initDiscordImportTaskItem(
+      t.`type`,
+      t.progress,
+      errorItems,
+      t.stopped)
+
 method setCommunityTags*(self: Module, communityTags: string) =
   self.view.setCommunityTags(communityTags)
 
@@ -224,6 +240,18 @@ method createCommunity*(self: Module, name: string,
   self.controller.createCommunity(name, description, introMessage, outroMessage, access, color, tags,
                                   imagePath, aX, aY, bX, bY, historyArchiveSupportEnabled, pinMessageAllMembersEnabled, bannerJsonStr)
 
+method requestImportDiscordCommunity*(self: Module, name: string,
+                        description, introMessage: string, outroMessage: string,
+                        access: int, color: string, tags: string,
+                        imagePath: string,
+                        aX: int, aY: int, bX: int, bY: int,
+                        historyArchiveSupportEnabled: bool,
+                        pinMessageAllMembersEnabled: bool,
+                        filesToImport: seq[string],
+                        fromTimestamp: int) =
+  self.controller.requestImportDiscordCommunity(name, description, introMessage, outroMessage, access, color, tags,
+                                  imagePath, aX, aY, bX, bY, historyArchiveSupportEnabled, pinMessageAllMembersEnabled, filesToImport, fromTimestamp)
+
 method deleteCommunityCategory*(self: Module, communityId: string, categoryId: string) =
   self.controller.deleteCommunityCategory(communityId, categoryId)
 
@@ -253,6 +281,29 @@ method discordCategoriesAndChannelsExtracted*(self: Module, categories: seq[Disc
   self.view.setDiscordDataExtractionInProgress(false)
   self.view.setDiscordImportErrorsCount(errorsCount)
   self.view.discordChannelsModel().hasSelectedItemsChanged()
+
+method discordImportProgressUpdated*(self: Module, communityId: string, communityName: string, tasks: seq[DiscordImportTaskProgress], progress: float, errorsCount: int, warningsCount: int, stopped: bool) =
+
+  var taskItems: seq[DiscordImportTaskItem] = @[]
+  var taskErrors: seq[DiscordImportErrorItem] = @[]
+
+  for task in tasks:
+    for error in task.errors:
+      let errorItem = initDiscordImportErrorItem(task.`type`, error.code, error.message)
+      taskErrors.add(errorItem)
+    taskItems.add(self.getDiscordImportTaskItem(task))
+
+  self.view.setDiscordImportCommunityId(communityId)
+  self.view.setDiscordImportCommunityName(communityName)
+  self.view.discordImportTasksModel().setItems(taskItems)
+  self.view.discordImportErrorsModel().setItems(taskErrors)
+  self.view.setDiscordImportErrorsCount(errorsCount)
+  self.view.setDiscordImportWarningsCount(warningsCount)
+  # For some reason, exposing the global `progress` as QtProperty[float]`
+  # doesn't translate well into QML.
+  # That's why we pass it as integer instead.
+  self.view.setDiscordImportProgress((progress*100).int)
+  self.view.setDiscordImportProgressStopped(stopped)
 
 method requestToJoinCommunity*(self: Module, communityId: string, ensName: string) =
   self.controller.requestToJoinCommunity(communityId, ensName)

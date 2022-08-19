@@ -38,6 +38,7 @@ type
     TransactionParameters
     MentionedUsersPks
     SenderTrustStatus
+    DiscordMessage
 
 QtObject:
   type
@@ -112,7 +113,8 @@ QtObject:
       ModelRole.Links.int: "links",
       ModelRole.TransactionParameters.int: "transactionParameters",
       ModelRole.MentionedUsersPks.int: "mentionedUsersPks",
-      ModelRole.SenderTrustStatus.int: "senderTrustStatus"
+      ModelRole.SenderTrustStatus.int: "senderTrustStatus",
+      ModelRole.DiscordMessage.int: "discordMessage"
     }.toTable
 
   method data(self: Model, index: QModelIndex, role: int): QVariant =
@@ -205,6 +207,8 @@ QtObject:
       }))
     of ModelRole.MentionedUsersPks:
       result = newQVariant(item.mentionedUsersPks.join(" "))
+    of ModelRole.DiscordMessage:
+      result = newQVariant(item.discordMessage)
 
   proc updateItemAtIndex(self: Model, index: int) =
     let ind = self.createIndex(index, 0, nil)
