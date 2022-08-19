@@ -118,12 +118,12 @@ QtObject {
             advancedModule.toggleCommunitiesPortalSection()
         }
         else if (feature === experimentalFeatures.communityHistoryArchiveSupport) {
-          // toggle history archive support
-          advancedModule.toggleCommunityHistoryArchiveSupport()
+            // toggle history archive support
+            advancedModule.toggleCommunityHistoryArchiveSupport()
         }
         else if (feature === experimentalFeatures.wakuV2StoreEnabled) {
-          // toggle history archive support
-          advancedModule.toggleWakuV2Store()
+            // toggle history archive support
+            advancedModule.toggleWakuV2Store()
         }
         else if (feature === experimentalFeatures.activityCenter) {
             localAccountSensitiveSettings.isActivityCenterEnabled = !localAccountSensitiveSettings.isActivityCenterEnabled

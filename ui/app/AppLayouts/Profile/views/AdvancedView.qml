@@ -497,9 +497,10 @@ SettingsContentBase {
 
                 id: confirmDialog
                 showCancelButton: true
-                confirmationText: qsTr("Are you sure you want to %1 WakuV2 Store? You need to restart the app for this change to take effect.").arg(root.advancedStore.isWakuV2StoreEnabled ?
-                    qsTr("disable") :
-                    qsTr("enable"))
+                confirmationText: qsTr("Are you sure you want to %1 WakuV2 Store? You need to restart the app for this change to take effect.")
+                    .arg(root.advancedStore.isWakuV2StoreEnabled ?
+                        qsTr("disable") :
+                        qsTr("enable"))
                 onConfirmButtonClicked: {
                     root.advancedStore.toggleExperimentalFeature(root.advancedStore.experimentalFeatures.wakuV2StoreEnabled)
                     close()
