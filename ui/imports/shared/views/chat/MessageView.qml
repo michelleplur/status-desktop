@@ -63,7 +63,7 @@ Loader {
             Global.privacyModuleInst.profilePicturesVisibility !==
             Constants.profilePicturesVisibility.everyone)) {
             return ""
-        }
+          }
         return senderIcon
     }
     property string message: ""

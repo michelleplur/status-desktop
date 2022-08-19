@@ -279,6 +279,7 @@ ColumnLayout {
             }
 
             onEditCommunityChannel: {
+                console.log("CHAT ID: ", chatId)
                 root.rootStore.editCommunityChannel(
                     chatId,
                     newName,

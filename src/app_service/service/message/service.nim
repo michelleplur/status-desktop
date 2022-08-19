@@ -350,6 +350,7 @@ QtObject:
       else:
         self.msgCursor[chatId] = self.lastUsedMsgCursor[chatId]
 
+
     var messagesArr: JsonNode
     var messages: seq[MessageDto]
     if(responseObj.getProp("messages", messagesArr)):
@@ -423,6 +424,7 @@ QtObject:
     if(self.getCurrentMessageCursor(chatId).len > 0):
       return
 
+    echo "ASYNC LOAD CHAT MESSAGES: ", chatId
     # we're here if initial messages are not loaded yet
     self.asyncLoadMoreMessagesForChat(chatId)
 

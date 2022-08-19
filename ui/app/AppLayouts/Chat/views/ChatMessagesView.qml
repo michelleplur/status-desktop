@@ -240,8 +240,6 @@ Item {
 
         model: messageStore.messagesModel
 
-        Component.onCompleted: chatLogView.scrollToBottom(true)
-
         delegate: MessageView {
             id: msgDelegate
             objectName: "chatMessageViewDelegate"
@@ -282,6 +280,7 @@ Item {
             isEdited: model.isEdited
             linkUrls: model.links
             transactionParams: model.transactionParameters
+            // discordMessage: model.discordMessage
 
             gapFrom: model.gapFrom
             gapTo: model.gapTo

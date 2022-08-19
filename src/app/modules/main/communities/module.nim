@@ -83,6 +83,7 @@ method viewDidLoad*(self: Module) =
   self.delegate.communitiesModuleDidLoad()
 
 method getCommunityItem(self: Module, c: CommunityDto): SectionItem =
+  echo "ADDING ITEM WITH ID: ", c.id
   return initItem(
       c.id,
       SectionType.Community,

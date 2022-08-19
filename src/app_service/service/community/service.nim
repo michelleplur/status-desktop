@@ -274,6 +274,7 @@ QtObject:
     var community = communities[0]
 
     if(not self.allCommunities.hasKey(community.id)):
+      echo "COMMUNITY ADDED! >>>>>"
       self.events.emit(SIGNAL_COMMUNITY_ADDED, CommunityArgs(community: community))
     # add or update community
     self.allCommunities[community.id] = community

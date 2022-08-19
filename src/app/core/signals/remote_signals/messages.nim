@@ -78,6 +78,7 @@ proc fromEvent*(T: type MessageSignal, event: JsonNode): MessageSignal =
 
   if event["event"]{"communities"} != nil:
     for jsonCommunity in event["event"]["communities"]:
+      echo "ADDING COMMUNITY: ", jsonCommunity
       signal.communities.add(jsonCommunity.toCommunityDto())
 
   if event["event"]{"communitiesSettings"} != nil:

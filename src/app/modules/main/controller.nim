@@ -117,6 +117,7 @@ proc init*(self: Controller) =
 
   self.events.on(SIGNAL_COMMUNITY_CREATED) do(e:Args):
     let args = CommunityArgs(e)
+    echo "COMMUNITY CREATED: ", $args.community
     self.delegate.communityJoined(
       args.community,
       self.events,

@@ -21,6 +21,7 @@ const asyncFetchChatMessagesTask: Task = proc(argEncoded: string) {.gcsafe, nimc
     "chatId": arg.chatId
   }
 
+  echo "FETCHING FOR REAL!"
   # handle messages
   if(arg.msgCursor != CURSOR_VALUE_IGNORE):
     var messagesArr: JsonNode

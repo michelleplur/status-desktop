@@ -221,7 +221,7 @@ proc parseCuratedCommunities*(response: RpcResponse[JsonNode]): seq[CuratedCommu
         available: false,
         communityId: communityId.getStr()
       ))
-  
+
 proc contains(arrayToSearch: seq[int], searched: int): bool =
   for element in arrayToSearch:
     if element == searched:
