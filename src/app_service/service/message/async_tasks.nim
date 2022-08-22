@@ -27,6 +27,7 @@ const asyncFetchChatMessagesTask: Task = proc(argEncoded: string) {.gcsafe, nimc
     var messagesArr: JsonNode
     var messagesCursor: JsonNode
     let msgsResponse = status_go.fetchMessages(arg.chatId, arg.msgCursor, arg.limit)
+    #echo "RESPONSE: ", msgsResponse
     discard msgsResponse.result.getProp("cursor", messagesCursor)
     discard msgsResponse.result.getProp("messages", messagesArr)
     responseJson["messages"] = messagesArr

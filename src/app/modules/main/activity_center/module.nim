@@ -95,7 +95,7 @@ proc createMessageItemFromDto(self: Module, message: MessageDto, chatDetails: Ch
     newTransactionParametersItem("","","","","","",-1,""),
     message.mentionedUsersPks,
     contactDetails.details.trustStatus,
-    newDiscordMessageItem("","","","","","","", "")))
+    newDiscordMessageItem("","","","","","","","", @[])))
 
 method convertToItems*(
   self: Module,

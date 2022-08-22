@@ -1,6 +1,8 @@
-import Nimqml, json, strformat
+import Nimqml, json, strformat, sugar, sequtils
 
 import ../../../app_service/service/message/dto/message
+import discord_message_attachment_item
+import discord_message_attachments_model
 
 QtObject:
   type
@@ -13,6 +15,8 @@ QtObject:
       authorName: string
       authorAvatarUrl: string
       authorAvatarImageBase64: string
+      attachmentsModel: DiscordMessageAttachmentsModel
+      attachmentsModelVariant: QVariant
 
   proc setup(self: DiscordMessageItem) =
     self.QObject.setup
@@ -28,7 +32,8 @@ QtObject:
       content: string,
       authorAvatarUrl: string,
       authorName: string,
-      authorAvatarImageBase64: string
+      authorAvatarImageBase64: string,
+      attachments: seq[DiscordMessageAttachment] = @[]
       ): DiscordMessageItem =
     new(result, delete)
     result.setup
@@ -40,6 +45,9 @@ QtObject:
     result.authorAvatarUrl = authorAvatarUrl
     result.authorName = authorName
     result.authorAvatarImageBase64 = authorAvatarImageBase64
+    result.attachmentsModel = newDiscordMessageAttachmentsModel()
+    result.attachmentsModel.setItems(map(attachments, x => initDiscordMessageAttachmentItem(x.id, x.fileUrl, x.fileName, x.base64)))
+    result.attachmentsModelVariant = newQVariant(result.attachmentsModel)
 
   proc `$`*(self: DiscordMessageItem): string =
     result = fmt"""DiscordMessageItem(
@@ -111,3 +119,12 @@ QtObject:
   QtProperty[string] authorAvatarImageBase64:
     read = authorAvatarImageBase64
     notify = authorAvatarImageBase64Changed
+
+  proc attachmentsModel*(self: DiscordMessageItem): DiscordMessageAttachmentsModel =
+    return self.attachmentsModel
+
+  proc getAttachmentsModel*(self: DiscordMessageItem): QVariant {.slot.} =
+    return self.attachmentsModelVariant
+
+  QtProperty[QVariant] attachments:
+    read = getAttachmentsModel

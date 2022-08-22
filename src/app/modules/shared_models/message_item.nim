@@ -3,7 +3,7 @@ import ../../../app_service/common/types
 import ../../../app_service/service/contacts/dto/contacts
 
 export types.ContentType
-import message_reaction_model, message_reaction_item, message_transaction_parameters_item, discord_message_item
+import message_reaction_model, message_reaction_item, message_transaction_parameters_item, discord_message_item, discord_message_attachments_model
 
 type
   Item* = ref object
@@ -106,6 +106,10 @@ proc initItem*(
     result.timestamp = parseInt(discordMessage.timestamp)*1000
     if discordMessage.timestampEdited != "":
       result.timestamp = parseInt(discordMessage.timestampEdited)*1000
+    if discordMessage.attachmentsModel().rowCount() > 0:
+      echo "BUT HERE? ", discordMessage.attachmentsModel().items[0].id
+      result.messageImage = discordMessage.attachmentsModel().items[0].fileUrl
+
 
 proc `$`*(self: Item): string =
   result = fmt"""Item(

@@ -201,7 +201,8 @@ proc buildPinnedMessageItem(self: Module, messageId: string, actionInitiatedBy: 
                           m.discordMessage.content,
                           m.discordMessage.author.avatarUrl,
                           m.discordMessage.author.name,
-                          m.discordMessage.author.avatarImageBase64)
+                          m.discordMessage.author.avatarImageBase64,
+                          m.discordMessage.attachments)
   )
   item.pinned = true
   item.pinnedBy = actionInitiatedBy

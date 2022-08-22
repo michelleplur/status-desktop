@@ -280,7 +280,7 @@ Item {
             isEdited: model.isEdited
             linkUrls: model.links
             transactionParams: model.transactionParameters
-            // discordMessage: model.discordMessage
+            discordMessage: model.discordMessage
 
             gapFrom: model.gapFrom
             gapTo: model.gapTo

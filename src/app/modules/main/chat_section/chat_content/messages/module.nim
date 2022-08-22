@@ -96,7 +96,7 @@ proc createFetchMoreMessagesItem(self: Module): Item =
     newTransactionParametersItem("","","","","","",-1,""),
     @[],
     TrustStatus.Unknown,
-    newDiscordMessageItem("", "", "", "", "", "", "", "")
+    newDiscordMessageItem("", "", "", "", "", "", "", "", @[])
   )
 
 proc createChatIdentifierItem(self: Module): Item =
@@ -134,7 +134,7 @@ proc createChatIdentifierItem(self: Module): Item =
     newTransactionParametersItem("","","","","","",-1,""),
     @[],
     TrustStatus.Unknown,
-    newDiscordMessageItem("","","","","","","","")
+    newDiscordMessageItem("","","","","","","","", @[])
   )
 
 proc checkIfMessageLoadedAndScrollToItIfItIs(self: Module): bool =
@@ -213,7 +213,8 @@ method newMessagesLoaded*(self: Module, messages: seq[MessageDto], reactions: se
                               m.discordMessage.content,
                               m.discordmessage.author.avatarUrl,
                               m.discordmessage.author.name,
-                              m.discordMessage.author.avatarImageBase64)
+                              m.discordMessage.author.avatarImageBase64,
+                              m.discordMessage.attachments)
       )
 
       for r in reactions:
@@ -309,7 +310,8 @@ method messageAdded*(self: Module, message: MessageDto) =
                           message.discordMessage.content,
                           message.discordMessage.author.avatarUrl,
                           message.discordMessage.author.name,
-                          message.discordMessage.author.avatarImageBase64)
+                          message.discordMessage.author.avatarImageBase64,
+                          message.discordMessage.attachments)
   )
 
   self.view.model().insertItemBasedOnTimestamp(item)

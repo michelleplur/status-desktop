@@ -148,10 +148,12 @@ Loader {
     property bool stickersLoaded: false
     //////////////////////////////////////
 
+    property var discordMessage
     property string sticker: "Qme8vJtyrEHxABcSVGPF95PtozDgUyfr1xGjePmFdZgk9v"
     property int stickerPack: -1
     property bool isEmoji: contentType === Constants.messageContentType.emojiType
-    property bool isImage: contentType === Constants.messageContentType.imageType
+    property bool isImage: contentType === Constants.messageContentType.imageType || 
+    (contentType === Constants.messageContentType.discordMessageType && discordMessage.attachments.rowCount() > 0)
     property bool isAudio: contentType === Constants.messageContentType.audioType
     property bool isStatusMessage: contentType === Constants.messageContentType.systemMessagePrivateGroupType
     property bool isSticker: contentType === Constants.messageContentType.stickerType

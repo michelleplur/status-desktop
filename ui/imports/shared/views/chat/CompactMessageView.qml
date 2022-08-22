@@ -579,7 +579,10 @@ Item {
                 anchors.topMargin: active ? 6 : 0
                 z: 51
                 sourceComponent: Component {
-                    StatusChatImage {
+                  StatusChatImage {
+                    Component.onCompleted: {
+                      console.log("SOURCE: ", messageImage)
+                    }
                         playing: root.messageStore.playAnimation
                         imageSource: messageImage
                         imageWidth: 200

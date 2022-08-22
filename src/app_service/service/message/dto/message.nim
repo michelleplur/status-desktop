@@ -41,6 +41,12 @@ type DiscordMessageReference* = object
   channelId*: string
   guildId*: string
 
+type DiscordMessageAttachment* = object
+  id*: string
+  fileUrl*: string
+  fileName*: string
+  base64*: string
+
 type DiscordMessage* = object
   id*: string
   `type`*: string
@@ -48,6 +54,7 @@ type DiscordMessage* = object
   timestampEdited*: string
   content*: string
   author*: DiscordMessageAuthor
+  attachments*: seq[DiscordMessageAttachment]
 
 type Sticker* = object
   hash*: string
@@ -117,6 +124,14 @@ proc toDiscordMessageAuthor*(jsonObj: JsonNode): DiscordMessageAuthor =
   discard jsonObj.getProp("avatarUrl", result.avatarUrl)
   discard jsonObj.getProp("avatarImageBase64", result.avatarImageBase64)
 
+proc toDiscordMessageAttachment*(jsonObj: JsonNOde): DiscordMessageAttachment =
+  result = DiscordMessageAttachment()
+  echo ">>> WE HERE?"
+  discard jsonObj.getProp("id", result.id)
+  discard jsonObj.getProp("url", result.fileUrl)
+  discard jsonObj.getProp("fileName", result.fileName)
+  discard jsonObj.getProp("base64", result.base64)
+
 proc toDiscordMessage*(jsonObj: JsonNode): DiscordMessage =
   result = DiscordMessage()
   discard jsonObj.getProp("id", result.id)
@@ -129,6 +144,11 @@ proc toDiscordMessage*(jsonObj: JsonNode): DiscordMessage =
   if(jsonObj.getProp("author", discordMessageAuthorObj)):
     result.author = toDiscordMessageAuthor(discordMessageAuthorObj)
 
+  result.attachments = @[]
+  var attachmentsArr: JsonNode
+  if(jsonObj.getProp("attachments", attachmentsArr) and attachmentsArr.kind == JArray):
+    for attachment in attachmentsArr:
+      result.attachments.add(toDiscordMessageAttachment(attachment))
 
 proc toQuotedMessage*(jsonObj: JsonNode): QuotedMessage =
   result = QuotedMessage()
