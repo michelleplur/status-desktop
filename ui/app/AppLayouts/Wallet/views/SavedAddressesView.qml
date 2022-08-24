@@ -71,7 +71,7 @@ Item {
         StatusListItem {
             id: savedAddress
             title: name
-            objectName: name
+            objectName: "savedAddressView_Delegate_" + name
             subTitle: (ensName.length > 0 ? ensName + " \u2022 " : "")
                       + Utils.elideText(address, 6, 4)
             implicitWidth: parent.width
@@ -99,12 +99,14 @@ Item {
                     textToCopy: address
                 },
                 StatusRoundButton {
+                    objectName: "savedAddressView_Delegate_favouriteButton"
                     icon.color: savedAddress.showButtons ? Theme.palette.directColor1 : Theme.palette.baseColor1
                     type: StatusRoundButton.Type.Tertiary
                     icon.name: favourite ? "unfavourite" : "favourite"
                     onClicked: _internal.error = RootStore.createOrUpdateSavedAddress(name, address, !favourite)
                 },
                 StatusRoundButton {
+                    objectName: "savedAddressView_Delegate_menuButton"
                     icon.color: savedAddress.showButtons ? Theme.palette.directColor1 : Theme.palette.baseColor1
                     type: StatusRoundButton.Type.Tertiary
                     icon.name: "more"
@@ -238,7 +240,7 @@ Item {
 
     StatusListView {
         id: listView
-        objectName: "savedAddresses"
+        objectName: "SavedAddressesView_savedAddresses"
         anchors.top: errorMessage.bottom
         anchors.topMargin: Style.current.padding
         anchors.bottom: parent.bottom
