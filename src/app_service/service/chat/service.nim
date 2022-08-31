@@ -229,6 +229,10 @@ QtObject:
       error "no chats or messages in the parsed response"
       return
 
+    for chat in chats:
+      if (chat.active):
+        self.events.emit(SIGNAL_CHAT_CREATED, CreatedChatArgs(chat: chat))
+
     for msg in messages:
       self.events.emit(SIGNAL_SENDING_SUCCESS, MessageSendingSuccess(message: msg, chat: chats[0]))
 
