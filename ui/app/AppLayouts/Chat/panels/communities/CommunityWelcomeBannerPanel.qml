@@ -96,6 +96,7 @@ Rectangle {
 
     StatusQControls.StatusButton {
         id: addMembersBtn
+        objectName:"CommunityWelcomeBannerPanel_AddMembersButton"
         text: qsTr("Add members")
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: manageBtn.top

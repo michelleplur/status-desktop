@@ -4,7 +4,7 @@ Feature: Status Desktop Group Chat
 
   Background:
 
-       Given the user starts the application with a specific data folder ../../../fixtures/group_chat
+       Given the user starts the application with a specific data folder ../../../fixtures/mutual_contacts
 
     @mayfail
  	Scenario: As an admin user I want to create a group chat with my contacts and the invited users can send messages

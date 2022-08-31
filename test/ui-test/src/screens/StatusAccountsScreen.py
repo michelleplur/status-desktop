@@ -38,7 +38,7 @@ class StatusAccountsScreen():
         [is_loaded, accountsList] = is_loaded_visible_and_enabled(SAccountsComponents.ACCOUNTS_POPUP.value)
         if is_loaded:
             for index in range(accountsList.count):
-                a = accountsList.itemAtIndex(index)
+                a = accountsList.itemAt(index)
                 if(a.label == account):
                     account_obj = a
                     found = True

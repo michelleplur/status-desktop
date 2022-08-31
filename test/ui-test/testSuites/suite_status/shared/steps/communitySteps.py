@@ -122,3 +122,7 @@ def step(context, message_index):
 def step(context, amount):
     _statusCommunityScreen.check_pin_count(amount)
 
+@When("the admin invites the user named |any| to the community with message |any|")
+def step(context, user_name, message):
+    _statusCommunityScreen.invite_user_to_community(user_name, message)
+

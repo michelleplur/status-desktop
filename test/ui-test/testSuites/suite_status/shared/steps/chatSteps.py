@@ -27,6 +27,7 @@ def step(context):
     
 @When("the user clicks on |any| chat")
 def step(context, chatName):
+    _statusMain.wait_for_banner_to_disappear()
     _statusMain.open_chat(chatName)
     
 @When("the user inputs a mention to |any| with message |any|")
