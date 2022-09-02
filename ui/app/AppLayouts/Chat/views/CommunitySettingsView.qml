@@ -80,6 +80,7 @@ StatusSectionLayout {
 
             model: root.settingsMenuModel
             delegate: StatusNavigationListItem {
+                objectName: "CommunitySettingsView_NavigationListItem_" + modelData.name
                 width: listView.width
                 title: modelData.name
                 icon.name: modelData.icon

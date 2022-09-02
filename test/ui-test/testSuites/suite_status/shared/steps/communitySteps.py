@@ -20,6 +20,10 @@ def step(context):
 def step(context, community_name, community_description, community_intro, community_outro):
     _statusCommunitityPortal.create_community(community_name, community_description, community_intro, community_outro)
 
+@When("the user opens the community named |any|")
+def step(context, community_name):
+    _statusMainScreen.click_community(community_name)
+
 @Then("the user lands on the community named |any|")
 def step(context, community_name):
     StatusCommunityScreen()
@@ -125,4 +129,12 @@ def step(context, amount):
 @When("the admin invites the user named |any| to the community with message |any|")
 def step(context, user_name, message):
     _statusCommunityScreen.invite_user_to_community(user_name, message)
+
+@When("the admin kicks the user named |any|")
+def step(context, user_name):
+    _statusCommunityScreen.kick_member_from_community(user_name)
+
+@Then("the number of members is |any|")
+def step(context, amount):
+    _statusCommunityScreen.verify_number_of_members(amount)
 
