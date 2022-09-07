@@ -205,6 +205,9 @@ method onStatusUrlRequested*(self: AccessInterface, action: StatusUrlAction, com
 method getVerificationRequestFrom*(self: AccessInterface, publicKey: string): VerificationRequest {.base.} =
   raise newException(ValueError, "No implementation available")
 
+method onMyRequestAdded*(self: AccessInterface) {.base.} =
+  raise newException(ValueError, "No implementation available")
+
 # This way (using concepts) is used only for the modules managed by AppController
 type
   DelegateInterface* = concept c
