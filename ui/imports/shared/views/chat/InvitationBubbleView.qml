@@ -73,6 +73,7 @@ Item {
             name: root.invitedCommunity ? root.invitedCommunity.name : ""
             introMessage: root.invitedCommunity ? root.invitedCommunity.introMessage : ""
             imageSrc: root.invitedCommunity ? root.invitedCommunity.image : ""
+            access: root.invitedCommunity ? root.invitedCommunity.access : -1
 
             onJoined: joinMethod()
         }
