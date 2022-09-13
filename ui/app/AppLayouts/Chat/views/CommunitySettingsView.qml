@@ -57,6 +57,25 @@ StatusSectionLayout {
     signal backToCommunityClicked
     signal openLegacyPopupClicked // TODO: remove me when migration to new settings is done
 
+    headerContent: Item {
+        StatusIconTextButton {
+            id: backButton
+            implicitHeight: 24
+            anchors.left: parent.left
+            anchors.leftMargin: 32
+            anchors.verticalCenter: parent.verticalCenter
+            visible: !!text
+            spacing: 8
+            statusIcon: "arrow"
+            icon.width: 24
+            icon.height: 24
+            font.pixelSize: 15
+            onClicked: {
+                centerPanelContentLoader.item.children[d.currentIndex].updateState();
+            }
+        }
+    }
+
     leftPanel: ColumnLayout {
         anchors {
             fill: parent
@@ -125,6 +144,7 @@ StatusSectionLayout {
     }
 
     centerPanel: Loader {
+        id: centerPanelContentLoader
         anchors.fill: parent
         //anchors.margins: 32
         anchors {
@@ -150,7 +170,9 @@ StatusSectionLayout {
                 archiveSupportEnabled: root.community.historyArchiveSupportEnabled
                 requestToJoinEnabled: root.community.access === Constants.communityChatOnRequestAccess
                 pinMessagesEnabled: root.community.pinMessageAllMembersEnabled
-
+                onCurrentIndexChanged: {
+                    backButton.text = (currentIndex === 1) ? qsTr("Overview") : "";
+                }
                 archiveSupportOptionVisible: root.rootStore.isCommunityHistoryArchiveSupportEnabled
                 editable: root.community.amISectionAdmin
 
@@ -205,7 +227,11 @@ StatusSectionLayout {
                 onDeclineRequestToJoin: root.rootStore.declineRequestToJoinCommunity(id)
             }
 
-            CommunityPermissionsSettingsPanel {}
+            CommunityPermissionsSettingsPanel {
+                onStateChanged: {
+                    backButton.text = previousPageName;
+                }
+            }
         }
     }
 
