@@ -26,6 +26,7 @@ StatusSectionLayout {
     property var importCommunitiesPopup: importCommunitiesPopupComponent
     property var createCommunitiesPopup: createCommunitiesPopupComponent
     property int contentPrefferedWidth: 100
+    property var discordImportProgressPopup: discordImportProgressDialog
 
     notificationCount: root.communitiesStore.unreadNotificationsCount
     onNotificationButtonClicked: Global.openActivityCenterPopup()
@@ -243,15 +244,26 @@ StatusSectionLayout {
                     }
                 }
                 CommunityBanner {
-                    text: qsTr("Import existing Discord community into Status")
+                    text: root.communitiesStore.discordImportInProgress && !root.communitiesStore.discordImportCancelled ? 
+                        qsTr("'%1' import in progress...").arg(root.communitiesStore.discordImportCommunityName) : 
+                        qsTr("Import existing Discord community into Status")
                     buttonText: qsTr("Import existing")
                     icon.name: "download"
+                    buttonTooltipText: qsTr("Your current import must finished or be cancelled before a new import can be started.")
+                    buttonLoading: root.communitiesStore.discordImportInProgress && !root.communitiesSotre.discordImportCancelled
                     onButtonClicked: {
                         chooseCommunityCreationTypePopup.close()
                         Global.openPopup(createCommunitiesPopupComponent, {isDiscordImport: true})
                     }
                 }
             }
+        }
+    }
+
+    Component {
+        id: discordImportProgressDialog
+        DiscordImportProgressDialog {
+            store: root.communitiesStore
         }
     }
 }

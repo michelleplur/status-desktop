@@ -243,6 +243,20 @@ StatusStackModal {
 
             readonly property bool canGoNext: root.store.discordChannelsModel.hasSelectedItems
             readonly property var nextAction: function () {
+                d.requestImportDiscordCommunity()
+                // replace ourselves with the progress dialog, no way back
+                root.leftButtons[0].visible = false
+                root.backgroundColor = Theme.palette.baseColor4
+                root.replace(progressComponent)
+            }
+
+            Component {
+                id: progressComponent
+                DiscordImportProgressContents {
+                    width: root.availableWidth
+                    store: root.store
+                    onClose: root.close()
+                }
             }
 
             Item {
@@ -454,33 +468,45 @@ StatusStackModal {
     QtObject {
         id: d
 
+        function _getCommunityConfig() {
+            return {
+                name: StatusQUtils.Utils.filterXSS(nameInput.input.text),
+                description: StatusQUtils.Utils.filterXSS(descriptionTextInput.input.text),
+                introMessage: StatusQUtils.Utils.filterXSS(introMessageInput.input.text),
+                outroMessage: StatusQUtils.Utils.filterXSS(outroMessageInput.input.text),
+                color: colorPicker.color.toString().toUpperCase(),
+                tags: communityTagsPicker.selectedTags,
+                image: {
+                    src: logoPicker.source,
+                    AX: logoPicker.cropRect.x,
+                    AY: logoPicker.cropRect.y,
+                    BX: logoPicker.cropRect.x + logoPicker.cropRect.width,
+                    BY: logoPicker.cropRect.y + logoPicker.cropRect.height,
+                },
+                options: {
+                    historyArchiveSupportEnabled: options.archiveSupportEnabled,
+                    checkedMembership: options.requestToJoinEnabled ? Constants.communityChatOnRequestAccess : Constants.communityChatPublicAccess,
+                    pinMessagesAllowedForMembers: options.pinMessagesEnabled
+                },
+                bannerJsonStr: JSON.stringify({imagePath: String(bannerPicker.source).replace("file://", ""), cropRect: bannerPicker.cropRect})
+            }
+        }
+
         function createCommunity() {
-            const error = store.createCommunity({
-                    name: StatusQUtils.Utils.filterXSS(nameInput.input.text),
-                    description: StatusQUtils.Utils.filterXSS(descriptionTextInput.input.text),
-                    introMessage: StatusQUtils.Utils.filterXSS(introMessageInput.input.text),
-                    outroMessage: StatusQUtils.Utils.filterXSS(outroMessageInput.input.text),
-                    color: colorPicker.color.toString().toUpperCase(),
-                    tags: communityTagsPicker.selectedTags,
-                    image: {
-                        src: logoPicker.source,
-                        AX: logoPicker.cropRect.x,
-                        AY: logoPicker.cropRect.y,
-                        BX: logoPicker.cropRect.x + logoPicker.cropRect.width,
-                        BY: logoPicker.cropRect.y + logoPicker.cropRect.height,
-                    },
-                    options: {
-                        historyArchiveSupportEnabled: options.archiveSupportEnabled,
-                        checkedMembership: options.requestToJoinEnabled ? Constants.communityChatOnRequestAccess : Constants.communityChatPublicAccess,
-                        pinMessagesAllowedForMembers: options.pinMessagesEnabled
-                    },
-                    bannerJsonStr: JSON.stringify({imagePath: String(bannerPicker.source).replace("file://", ""), cropRect: bannerPicker.cropRect})
-            })
+            const error = root.store.createCommunity(_getCommunityConfig())
             if (error) {
                 errorDialog.text = error.error
                 errorDialog.open()
             }
             root.close()
+        }
+
+        function requestImportDiscordCommunity() {
+            const error = root.store.requestImportDiscordCommunity(_getCommunityConfig(), datePicker.selectedDate.valueOf()/1000)
+            if (error) {
+                errorDialog.text = error.error
+                errorDialog.open()
+            }
         }
     }
 
