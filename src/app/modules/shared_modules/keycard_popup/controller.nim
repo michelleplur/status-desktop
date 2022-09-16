@@ -32,6 +32,8 @@ type
     tmpKeycardContainsMetadata: bool
     tmpPin: string
     tmpPinMatch: bool
+    tmpPuk: string
+    tmpValidPuk: bool
     tmpPassword: string
     tmpSelectedKeyPairIsProfile: bool
     tmpSelectedKeyPairDto: KeyPairDto
@@ -63,6 +65,7 @@ proc newController*(delegate: io_interface.AccessInterface,
   result.keychainService = keychainService
   result.tmpKeycardContainsMetadata = false
   result.tmpPinMatch = false
+  result.tmpValidPuk = false
   result.tmpSeedPhraseLength = 0
   result.tmpSelectedKeyPairIsProfile = false
   result.tmpUsePinFromBiometrics = false
@@ -139,6 +142,18 @@ proc setPin*(self: Controller, value: string) =
 
 proc getPin*(self: Controller): string =
   return self.tmpPin
+
+proc setPuk*(self: Controller, value: string) =
+  self.tmpPuk = value
+
+proc getPuk*(self: Controller): string =
+  return self.tmpPuk
+
+proc setPukValid*(self: Controller, value: bool) =
+  self.tmpValidPuk = value
+
+proc getValidPuk*(self: Controller): bool =
+  return self.tmpValidPuk
 
 proc setUsePinFromBiometrics*(self: Controller, value: bool) =
   self.tmpUsePinFromBiometrics = value
@@ -230,17 +245,17 @@ proc runGetAppInfoFlow*(self: Controller, factoryReset = false) =
   self.cancelCurrentFlow()
   self.keycardService.startGetAppInfoFlow(factoryReset)
 
-proc runGetMetadataFlow*(self: Controller) =
+proc runGetMetadataFlow*(self: Controller, resolveAddress = false) =
   self.cancelCurrentFlow()
-  self.keycardService.startGetMetadataFlow()
+  self.keycardService.startGetMetadataFlow(resolveAddress)
 
 proc runStoreMetadataFlow*(self: Controller, cardName: string, pin: string, walletPaths: seq[string]) =
   self.cancelCurrentFlow()
   self.keycardService.startStoreMetadataFlow(cardName, pin, walletPaths)
 
-proc runLoadAccountFlow*(self: Controller, factoryReset = false) =
+proc runLoadAccountFlow*(self: Controller, seedPhraseLength = 0, seedPhrase = "", puk = "", factoryReset = false) =
   self.cancelCurrentFlow()
-  self.keycardService.startLoadAccountFlow(factoryReset)
+  self.keycardService.startLoadAccountFlow(seedPhraseLength, seedPhrase, puk, factoryReset)
 
 proc runSignFlow*(self: Controller, keyUid = "", bip44Path = "", txHash = "") =
   ## For signing a transaction  we need to provide a key uid of a keypair that an account we want to sign a transaction 
@@ -260,6 +275,7 @@ proc readyToDisplayPopup*(self: Controller) =
   self.events.emit(SIGNAL_SHARED_KEYCARD_MODULE_DISPLAY_POPUP, data)
 
 proc terminateCurrentFlow*(self: Controller, lastStepInTheCurrentFlow: bool) =
+  self.cancelCurrentFlow()
   let (_, flowEvent) = self.getLastReceivedKeycardData()
   var data = SharedKeycarModuleFlowTerminatedArgs(uniqueIdentifier: self.uniqueIdentifier,
     lastStepInTheCurrentFlow: lastStepInTheCurrentFlow)
@@ -301,6 +317,18 @@ proc getMigratedKeyPairByKeyUid*(self: Controller, keyUid: string): seq[KeyPairD
     return
   return self.walletAccountService.getMigratedKeyPairByKeyUid(keyUid)
 
+proc setCurrentKeycardStateToLocked*(self: Controller, keycardUid: string) =
+  if not serviceApplicable(self.walletAccountService):
+    return
+  if not self.walletAccountService.setKeycardLocked(keycardUid):
+    info "updating keycard locked state failed", keycardUid=keycardUid
+
+proc setCurrentKeycardStateToUnlocked*(self: Controller, keycardUid: string) =
+  if not serviceApplicable(self.walletAccountService):
+    return
+  if not self.walletAccountService.setKeycardUnlocked(keycardUid):
+    info "updating keycard unlocked state failed", keycardUid=keycardUid
+
 proc getSigningPhrase*(self: Controller): string =
   if not serviceApplicable(self.settingsService):
     return
@@ -308,6 +336,9 @@ proc getSigningPhrase*(self: Controller): string =
 
 proc enterKeycardPin*(self: Controller, pin: string) =
   self.keycardService.enterPin(pin)
+
+proc enterKeycardPuk*(self: Controller, puk: string) =
+  self.keycardService.enterPuk(puk)
 
 proc storePinToKeycard*(self: Controller, pin: string, puk: string) =
   self.keycardService.storePin(pin, puk)

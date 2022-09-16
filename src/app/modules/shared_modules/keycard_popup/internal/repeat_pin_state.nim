@@ -15,12 +15,14 @@ method executeBackCommand*(self: RepeatPinState, controller: Controller) =
 method executeSecondaryCommand*(self: RepeatPinState, controller: Controller) =
   if not controller.getPinMatch():
     return
-  if self.flowType == FlowType.SetupNewKeycard:
-    controller.storePinToKeycard(controller.getPin(), controller.generateRandomPUK())  
+  if self.flowType == FlowType.SetupNewKeycard or
+    self.flowType == FlowType.UnlockKeycard:
+      controller.storePinToKeycard(controller.getPin(), controller.generateRandomPUK())  
 
 method executeTertiaryCommand*(self: RepeatPinState, controller: Controller) =
-  if self.flowType == FlowType.SetupNewKeycard:
-    controller.terminateCurrentFlow(lastStepInTheCurrentFlow = false)
+  if self.flowType == FlowType.SetupNewKeycard or
+    self.flowType == FlowType.UnlockKeycard:
+      controller.terminateCurrentFlow(lastStepInTheCurrentFlow = false)
      
 method resolveKeycardNextState*(self: RepeatPinState, keycardFlowType: string, keycardEvent: KeycardEvent, 
   controller: Controller): State =
@@ -33,3 +35,15 @@ method resolveKeycardNextState*(self: RepeatPinState, keycardFlowType: string, k
       keycardEvent.error == ErrorLoadingKeys:
         controller.setKeycardUid(keycardEvent.instanceUID)
         return createState(StateType.PinSet, self.flowType, nil)
+  if self.flowType == FlowType.UnlockKeycard:
+    if keycardFlowType == ResponseTypeValueEnterPUK and 
+      keycardEvent.error.len > 0 and
+      keycardEvent.error == RequestParamPUK:
+        controller.setKeycardData($keycardEvent.pukRetries)
+        controller.setPukValid(false)
+        if keycardEvent.pukRetries > 0:
+          return createState(StateType.PinSet, self.flowType, nil)
+        return createState(StateType.MaxPukRetriesReached, self.flowType, nil)
+    if keycardFlowType == ResponseTypeValueKeycardFlowResult:
+      controller.setPukValid(true)
+      return createState(StateType.PinSet, self.flowType, nil)

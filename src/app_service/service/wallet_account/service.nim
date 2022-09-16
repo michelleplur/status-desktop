@@ -150,6 +150,7 @@ QtObject:
 
   proc fetchAccounts*(self: Service): seq[WalletAccountDto] =
     let response = status_go_accounts.getAccounts()
+    echo "RESPONSE FETCH ACCOUNTS: ", $response
     return response.result.getElems().map(
         x => x.toWalletAccountDto()
       ).filter(a => not a.isChat)
@@ -498,6 +499,7 @@ QtObject:
   proc getAllMigratedKeyPairs*(self: Service): seq[KeyPairDto] = 
     try:
       let response = backend.getAllMigratedKeyPairs()
+      echo "ALL KPAIRS: ", $response
       if self.responseHasNoErrors("getAllMigratedKeyPairs", response):
         return map(response.result.getElems(), proc(x: JsonNode): KeyPairDto = toKeyPairDto(x))
     except Exception as e:

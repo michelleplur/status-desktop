@@ -146,6 +146,7 @@ SettingsContentBase {
             ]
             onClicked: {
                 console.warn("TODO: Import from Keycard to Status Desktop...")
+                root.keycardStore.runUnlockKeycardPopup()
             }
         }
 
@@ -167,7 +168,7 @@ SettingsContentBase {
                 }
             ]
             onClicked: {
-                console.warn("TODO: Check what’s on a Keycard...")
+                root.keycardStore.runDisplayKeycardContentPopup()
             }
         }
 
@@ -182,7 +183,7 @@ SettingsContentBase {
                 }
             ]
             onClicked: {
-                console.warn("TODO: Factory reset a Keycard...")
+                root.keycardStore.runFactoryResetPopup()
             }
         }
     }

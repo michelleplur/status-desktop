@@ -14,18 +14,27 @@ proc delete*(self: WrongSeedPhraseState) =
 
 method executePrimaryCommand*(self: WrongSeedPhraseState, controller: Controller) =
   if self.flowType == FlowType.SetupNewKeycard:
-    controller.setKeycardData(getPredefinedKeycardData(controller.getKeycardData(), PredefinedKeycardData.WrongSeedPhrase, add = false))
+    controller.setKeycardData(updatePredefinedKeycardData(controller.getKeycardData(), PredefinedKeycardData.WrongSeedPhrase, add = false))
     sleep(500) # just to shortly remove text on the UI side
     self.verifiedSeedPhrase = controller.validSeedPhrase(controller.getSeedPhrase()) and
       controller.seedPhraseRefersToSelectedKeyPair(controller.getSeedPhrase())
     if self.verifiedSeedPhrase:
       controller.storeSeedPhraseToKeycard(controller.getSeedPhraseLength(), controller.getSeedPhrase())
     else:
-      controller.setKeycardData(getPredefinedKeycardData(controller.getKeycardData(), PredefinedKeycardData.WrongSeedPhrase, add = true))
+      controller.setKeycardData(updatePredefinedKeycardData(controller.getKeycardData(), PredefinedKeycardData.WrongSeedPhrase, add = true))
+  if self.flowType == FlowType.UnlockKeycard:
+    controller.setKeycardData(updatePredefinedKeycardData(controller.getKeycardData(), PredefinedKeycardData.WrongSeedPhrase, add = false))
+    sleep(500) # just to shortly remove text on the UI side
+    self.verifiedSeedPhrase = controller.validSeedPhrase(controller.getSeedPhrase())
+    if self.verifiedSeedPhrase:
+      echo "WRONG SEED..."
+    else:
+      controller.setKeycardData(updatePredefinedKeycardData(controller.getKeycardData(), PredefinedKeycardData.WrongSeedPhrase, add = true))
 
 method executeTertiaryCommand*(self: WrongSeedPhraseState, controller: Controller) =
-  if self.flowType == FlowType.SetupNewKeycard:
-    controller.terminateCurrentFlow(lastStepInTheCurrentFlow = false)
+  if self.flowType == FlowType.SetupNewKeycard or
+    self.flowType == FlowType.UnlockKeycard:
+      controller.terminateCurrentFlow(lastStepInTheCurrentFlow = false)
 
 method resolveKeycardNextState*(self: WrongSeedPhraseState, keycardFlowType: string, keycardEvent: KeycardEvent, 
   controller: Controller): State =
@@ -35,5 +44,5 @@ method resolveKeycardNextState*(self: WrongSeedPhraseState, keycardFlowType: str
   if self.flowType == FlowType.SetupNewKeycard:
     if keycardFlowType == ResponseTypeValueKeycardFlowResult and 
       keycardEvent.keyUid.len > 0:
-        controller.setKeycardData(getPredefinedKeycardData(controller.getKeycardData(), PredefinedKeycardData.WrongSeedPhrase, add = false))
+        controller.setKeycardData(updatePredefinedKeycardData(controller.getKeycardData(), PredefinedKeycardData.WrongSeedPhrase, add = false))
         return createState(StateType.MigratingKeyPair, self.flowType, nil)

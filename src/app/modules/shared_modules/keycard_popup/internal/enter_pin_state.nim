@@ -61,13 +61,16 @@ method resolveKeycardNextState*(self: EnterPinState, keycardFlowType: string, ke
       controller.setKeycardData($keycardEvent.pinRetries)
       if keycardEvent.pinRetries > 0:
         return createState(StateType.WrongPin, self.flowType, nil)
+      controller.setKeycardData(updatePredefinedKeycardData(controller.getKeycardData(), PredefinedKeycardData.UseUnlockLabelForLockedState, add = true))
       return createState(StateType.MaxPinRetriesReached, self.flowType, nil)
     if keycardFlowType == ResponseTypeValueEnterPIN and 
       keycardEvent.error.len == 0:
+        controller.setKeycardData(updatePredefinedKeycardData(controller.getKeycardData(), PredefinedKeycardData.UseUnlockLabelForLockedState, add = true))
         return createState(StateType.MaxPinRetriesReached, self.flowType, nil)
     if keycardFlowType == ResponseTypeValueEnterPUK and 
       keycardEvent.error.len == 0:
         if keycardEvent.pinRetries == 0 and keycardEvent.pukRetries > 0:
+          controller.setKeycardData(updatePredefinedKeycardData(controller.getKeycardData(), PredefinedKeycardData.UseUnlockLabelForLockedState, add = true))
           return createState(StateType.MaxPinRetriesReached, self.flowType, nil)
     if keycardFlowType == ResponseTypeValueKeycardFlowResult:
       controller.setMetadataFromKeycard(keycardEvent.cardMetadata)
