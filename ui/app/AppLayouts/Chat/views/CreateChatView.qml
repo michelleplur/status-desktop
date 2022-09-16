@@ -48,7 +48,6 @@ Page {
                 Layout.rightMargin: 16
 
                 rootStore: root.rootStore
-                enabled: root.rootStore.contactsModel.count > 0
 
                 function createChat() {
                     if (model.count === 0) {
@@ -86,7 +85,10 @@ Page {
                     Global.closeCreateChatView()
                 }
 
-                onVisibleChanged: if (visible) edit.forceActiveFocus()
+                onVisibleChanged: {
+                    if (visible)
+                        edit.forceActiveFocus()
+                }
             }
 
             StatusActivityCenterButton {
@@ -122,6 +124,7 @@ Page {
             StatusListView {
                 id: contactsList
 
+                Layout.fillWidth: true
                 Layout.fillHeight: true
 
                 visible: membersSelector.suggestionsModel.count &&
@@ -131,6 +134,7 @@ Page {
 
                 model: membersSelector.suggestionsModel
                 delegate: ContactListItemDelegate {
+                    width: ListView.view.width
                     onClicked: membersSelector.entryAccepted(this)
                 }
             }
