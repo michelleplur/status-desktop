@@ -378,7 +378,7 @@ Item {
                 text: qsTr("Unlock this Keycard")
                 font.pixelSize: Constants.keycard.general.fontSize1
                 font.weight: Font.Bold
-                color: Theme.palette.dangerColor1
+                color: Theme.palette.directColor1
             }
             PropertyChanges {
                 target: image
@@ -447,21 +447,18 @@ Item {
                 text: qsTr("Keycard is empty")
                 font.pixelSize: Constants.keycard.general.fontSize1
                 font.weight: Font.Bold
-                color: root.sharedKeycardModule.currentState.flowType === Constants.keycardSharedFlow.authentication?
-                           Theme.palette.dangerColor1 : Theme.palette.directColor1
+                color: Theme.palette.directColor1
             }
             PropertyChanges {
                 target: image
-                source: root.sharedKeycardModule.currentState.flowType === Constants.keycardSharedFlow.authentication?
-                            Style.png("keycard/plain-error") : Style.png("keycard/card-empty")
+                source: Style.png("keycard/card-empty")
                 pattern: ""
             }
             PropertyChanges {
                 target: message
                 text: qsTr("There is no key pair on this Keycard")
                 font.pixelSize: Constants.keycard.general.fontSize2
-                color: root.sharedKeycardModule.currentState.flowType === Constants.keycardSharedFlow.authentication?
-                           Theme.palette.dangerColor1 : Theme.palette.directColor1
+                color: Theme.palette.directColor1
             }
         },
         State {

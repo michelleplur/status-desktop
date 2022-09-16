@@ -14,7 +14,8 @@ method getNextPrimaryState*(self: MaxPukRetriesReachedState, controller: Control
       return createState(StateType.FactoryResetConfirmation, self.flowType, self)
   if self.flowType == FlowType.Authentication:
       debug "Run Unlock Keycard flow... (not developed yet)"
-  return nil
+  if self.flowType == FlowType.UnlockKeycard:
+    return createState(StateType.EnterSeedPhrase, self.flowType, self)
 
 method executeTertiaryCommand*(self: MaxPukRetriesReachedState, controller: Controller) =
   if self.flowType == FlowType.FactoryReset or

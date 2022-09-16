@@ -19,9 +19,10 @@ method executePrimaryCommand*(self: EnterSeedPhraseState, controller: Controller
     else:
       controller.setKeycardData(updatePredefinedKeycardData(controller.getKeycardData(), PredefinedKeycardData.WrongSeedPhrase, add = true))
   if self.flowType == FlowType.UnlockKeycard:
-    self.verifiedSeedPhrase = controller.validSeedPhrase(controller.getSeedPhrase())
+    self.verifiedSeedPhrase = controller.validSeedPhrase(controller.getSeedPhrase()) and
+      controller.getKeyUidForSeedPhrase(controller.getSeedPhrase()) == controller.getKeyUidWhichIsBeingUnlocking()
     if self.verifiedSeedPhrase:
-      echo "ENTER SEED..."
+      controller.runGetMetadataFlow()
     else:
       controller.setKeycardData(updatePredefinedKeycardData(controller.getKeycardData(), PredefinedKeycardData.WrongSeedPhrase, add = true))
 
@@ -45,3 +46,14 @@ method resolveKeycardNextState*(self: EnterSeedPhraseState, keycardFlowType: str
     if keycardFlowType == ResponseTypeValueKeycardFlowResult and 
       keycardEvent.keyUid.len > 0:
         return createState(StateType.MigratingKeyPair, self.flowType, nil)
+  if self.flowType == FlowType.UnlockKeycard:
+    if controller.getCurrentKeycardServiceFlow() == KCSFlowType.GetMetadata:
+      controller.setMetadataFromKeycard(keycardEvent.cardMetadata)
+      if keycardFlowType == ResponseTypeValueKeycardFlowResult:
+        if keycardEvent.error.len == 0:
+          controller.runLoadAccountFlow(seedPhraseLength = controller.getSeedPhraseLength(), seedPhrase = controller.getSeedPhrase(), puk = "", factoryReset = true)
+    if controller.getCurrentKeycardServiceFlow() == KCSFlowType.LoadAccount:
+      if keycardFlowType == ResponseTypeValueEnterNewPIN and 
+        keycardEvent.error.len > 0 and
+        keycardEvent.error == ErrorRequireInit:
+          return createState(StateType.CreatePin, self.flowType, nil)

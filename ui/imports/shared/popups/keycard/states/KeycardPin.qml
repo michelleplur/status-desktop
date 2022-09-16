@@ -83,7 +83,8 @@ Item {
         anchors.bottomMargin: Style.current.halfPadding
         anchors.leftMargin: Style.current.xlPadding
         anchors.rightMargin: Style.current.xlPadding
-        spacing: Style.current.halfPadding
+        spacing: root.sharedKeycardModule.currentState.flowType === Constants.keycardSharedFlow.authentication?
+                     Style.current.halfPadding : Style.current.padding
 
         KeycardImage {
             id: image

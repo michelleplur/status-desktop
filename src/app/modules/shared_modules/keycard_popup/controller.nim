@@ -30,6 +30,7 @@ type
     keychainConnectionIds: seq[UUID]
     connectionKeycardResponse: UUID
     tmpKeycardContainsMetadata: bool
+    tmpCardMetadata: CardMetadata
     tmpPin: string
     tmpPinMatch: bool
     tmpPuk: string
@@ -41,6 +42,7 @@ type
     tmpSeedPhrase: string
     tmpSeedPhraseLength: int
     tmpKeyUidWhichIsBeingAuthenticating: string
+    tmpKeyUidWhichIsBeingUnlocking: string
     tmpUsePinFromBiometrics: bool
 
 proc newController*(delegate: io_interface.AccessInterface,
@@ -176,6 +178,12 @@ proc getPassword*(self: Controller): string =
 proc getKeyUidWhichIsBeingAuthenticating*(self: Controller): string =
   self.tmpKeyUidWhichIsBeingAuthenticating
 
+proc getKeyUidWhichIsBeingUnlocking*(self: Controller): string =
+  self.tmpKeyUidWhichIsBeingUnlocking
+
+proc setKeyUidWhichIsBeingUnlocking*(self: Controller, keyUid: string) =
+  self.tmpKeyUidWhichIsBeingUnlocking = keyUid
+
 proc setSelectedKeyPairIsProfile*(self: Controller, value: bool) =
   self.tmpSelectedKeyPairIsProfile = value
 
@@ -212,6 +220,10 @@ proc validSeedPhrase*(self: Controller, seedPhrase: string): bool =
   let err = self.accountsService.validateMnemonic(seedPhrase)
   return err.len == 0
 
+proc getKeyUidForSeedPhrase*(self: Controller, seedPhrase: string): string =
+  let acc = self.accountsService.createAccountFromMnemonic(seedPhrase)
+  return acc.keyUid
+
 proc seedPhraseRefersToSelectedKeyPair*(self: Controller, seedPhrase: string): bool =
   let acc = self.accountsService.createAccountFromMnemonic(seedPhrase)
   return acc.keyUid == self.tmpSelectedKeyPairDto.keyUid
@@ -232,8 +244,13 @@ proc getCurrentKeycardServiceFlow*(self: Controller): keycard_service.KCSFlowTyp
 proc getLastReceivedKeycardData*(self: Controller): tuple[flowType: string, flowEvent: KeycardEvent] =
   return self.keycardService.getLastReceivedKeycardData()
 
-proc setMetadataFromKeycard*(self: Controller, cardMetadata: CardMetadata) =
-  self.delegate.setKeyPairStoredOnKeycard(cardMetadata)
+proc getMetadataFromKeycard*(self: Controller): CardMetadata =
+  return self.tmpCardMetadata
+
+proc setMetadataFromKeycard*(self: Controller, cardMetadata: CardMetadata, updateKeyPair = false) =
+  self.tmpCardMetadata = cardMetadata
+  if updateKeyPair:
+    self.delegate.setKeyPairStoredOnKeycard(cardMetadata)
 
 proc cancelCurrentFlow*(self: Controller) =
   self.keycardService.cancelCurrentFlow()

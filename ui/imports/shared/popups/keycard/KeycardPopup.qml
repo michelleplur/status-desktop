@@ -592,6 +592,12 @@ StatusModal {
                             root.sharedKeycardModule.currentState.stateType === Constants.keycardSharedState.enterPuk ||
                             root.sharedKeycardModule.currentState.stateType === Constants.keycardSharedState.wrongPuk)
                         return qsTr("Next")
+                    if (root.sharedKeycardModule.currentState.stateType === Constants.keycardSharedState.wrongSeedPhrase) {
+                        return qsTr("Try entering seed phrase again")
+                    }
+                    if (root.sharedKeycardModule.currentState.stateType === Constants.keycardSharedState.maxPukRetriesReached) {
+                        return qsTr("Unlock Keycard")
+                    }
                 }
                 return ""
             }

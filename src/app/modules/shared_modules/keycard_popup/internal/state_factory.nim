@@ -1,4 +1,4 @@
-import parseutils, chronicles
+import parseutils, sequtils, sugar, chronicles
 import ../../../../../app_service/service/keycard/constants
 import ../controller
 from ../../../../../app_service/service/keycard/service import KCSFlowType
@@ -342,6 +342,7 @@ proc ensureReaderAndCardPresenceAndResolveNextState*(state: State, keycardFlowTy
   ## Handling unlock keycard flow
   if state.flowType == FlowType.UnlockKeycard:
     if controller.getCurrentKeycardServiceFlow() == KCSFlowType.GetMetadata:
+      controller.setKeyUidWhichIsBeingUnlocking(keycardEvent.keyUid)
       if keycardFlowType == ResponseTypeValueEnterPIN and
         keycardEvent.error.len == 0:
           return createState(StateType.KeycardAlreadyUnlocked, state.flowType, nil)
@@ -358,5 +359,9 @@ proc ensureReaderAndCardPresenceAndResolveNextState*(state: State, keycardFlowTy
       if keycardFlowType == ResponseTypeValueEnterPUK and 
         keycardEvent.error.len == 0:
           return createState(StateType.RecognizedKeycard, state.flowType, nil)
+      if keycardFlowType == ResponseTypeValueKeycardFlowResult or
+        keycardEvent.error.len > 0:
+          if keycardEvent.error == ErrorNoKeys:
+            return createState(StateType.KeycardEmpty, state.flowType, nil)
     if controller.getCurrentKeycardServiceFlow() == KCSFlowType.RecoverAccount:
       echo "RECOVER..."
