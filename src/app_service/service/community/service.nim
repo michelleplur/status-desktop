@@ -240,6 +240,10 @@ QtObject:
       if (chat.categoryId == categoryId):
         let fullChatId = community.id & chat.id
         var chatDetails = self.chatService.getChatById(fullChatId)
+        # chats moved to a new category must be searched by chat.id
+        # because their chat.id is already equal to fullChatId
+        if (chatDetails.id == ""):
+          chatDetails = self.chatService.getChatById(chat.id)
         result.add(chatDetails)
 
   proc handleCommunitiesSettingsUpdates(self: Service, communitiesSettings: seq[CommunitySettingsDto]) =
