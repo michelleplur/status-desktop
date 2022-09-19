@@ -308,7 +308,7 @@ compile-translations: $(QM_BINARIES)
 # limits; our docs should include directions for community contributor to setup
 # their own Infura account and token instead of relying on this default token
 # during development
-DEFAULT_TOKEN := 220a1abb4b6943a093c35d0ce4fb0732
+DEFAULT_TOKEN := 2fce88755cc547f7884adf3bdd1cc54a
 INFURA_TOKEN ?= $(DEFAULT_TOKEN)
 NIM_PARAMS += -d:INFURA_TOKEN:"$(INFURA_TOKEN)"
 

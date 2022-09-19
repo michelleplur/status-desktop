@@ -140,7 +140,7 @@ QtObject:
     except:
       discard
 
-    return self.delegate.suggestedRoutes(account, parsedAmount, token, seqDisabledChainIds)
+    return self.delegate.suggestedRoutes(account, parsedAmount, token, seqDisabledChainIds, @[])
   
   proc getChainIdForChat*(self: View): int {.slot.} =
     return self.delegate.getChainIdForChat()

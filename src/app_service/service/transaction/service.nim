@@ -384,11 +384,11 @@ QtObject:
     except Exception as e:
       error "Error getting suggested fees", msg = e.msg
 
-  proc suggestedRoutes*(self: Service, account: string, amount: float64, token: string, disabledChainIDs: seq[uint64]): SuggestedRoutes =
+  proc suggestedRoutes*(self: Service, account: string, amount: float64, token: string, disabledChainIDs: seq[uint64], preferredChainIDs: seq[uint64]): SuggestedRoutes =
     try:
-      let response = eth.suggestedRoutes(account, amount, token, disabledChainIDs)
+      let response = eth.suggestedRoutes(account, amount, token, disabledChainIDs, preferredChainIDs)
       return SuggestedRoutes(
-        networks: Json.decode($response.result{"networks"}, seq[NetworkDto])
+        networks: Json.decode($response, seq[NetworkDto])
       )
     except Exception as e:
       error "Error getting suggested routes", msg = e.msg
