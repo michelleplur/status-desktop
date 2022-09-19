@@ -826,6 +826,7 @@ method contactUpdated*[T](self: Module[T], publicKey: string) =
     contactDetails.details.alias,
     contactDetails.icon,
     isContact = contactDetails.details.isContact,
+    isVerified = contactDetails.details.isContactVerified(),
     isUntrustworthy = contactDetails.details.isContactUntrustworthy(),
     )
 
